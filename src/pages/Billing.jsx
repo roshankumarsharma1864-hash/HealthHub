@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { billingService, patientService } from '../services/hmsServices.js';
-import { Plus, Download, Edit2, Trash2, CreditCard, DollarSign, PlusCircle, Trash, RefreshCw } from 'lucide-react';
+import { Plus, Download, Edit2, Trash2, CreditCard, DollarSign, PlusCircle, Trash, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button, Input, Select, Card, Badge, Modal } from '../components/UI.jsx';
 import { pdfGenerator } from '../utils/pdfGenerator.js';
 
@@ -124,10 +124,10 @@ export const Billing = () => {
   const handleDownloadPDF = (bill) => {
     const pat = patients.find(p => p.id === bill.patientId);
     pdfGenerator.generateInvoice(bill, pat, {
-      hospitalName: 'Careflow Medical Center',
+      hospitalName: 'HEALTH HUB',
       hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
       hospitalPhone: '+1 (555) 100-2000',
-      hospitalEmail: 'billing@careflow.com'
+      hospitalEmail: 'billing@healthhub.com'
     });
     toast.success('Invoice PDF download triggered.');
   };
@@ -136,13 +136,19 @@ export const Billing = () => {
   const tax = Math.round(subtotal * 0.05 * 100) / 100;
   const grandTotal = Math.max(0, subtotal + tax - Number(discount));
 
+  // Calculations for billing dashboard
+  const revenueTotal = bills.filter(b => b.status === 'Paid').reduce((sum, b) => sum + b.total, 0);
+  const paidCount = bills.filter(b => b.status === 'Paid').length;
+  const pendingCount = bills.filter(b => b.status === 'Partial').length;
+  const overdueCount = bills.filter(b => b.status === 'Unpaid').length;
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
       {/* Title */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center select-none">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">Billing & Invoices</h1>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Generate receipts, manage VAT taxes, and download itemized invoice PDFs.</p>
+          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">Billing & Invoices</h1>
+          <p className="text-slate-400 text-xs mt-1">Manage invoice statement receipts, process clinical fees, and print itemized PDF records.</p>
         </div>
         {(isAdmin || isReceptionist) && (
           <Button size="sm" variant="primary" icon={Plus} onClick={openCreateModal}>
@@ -151,8 +157,40 @@ export const Billing = () => {
         )}
       </div>
 
+      {/* KPI Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-155 transition-all">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Total Revenue</span>
+            <DollarSign className="w-4.5 h-4.5 text-primary-600" />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-3">${revenueTotal.toLocaleString()}</span>
+        </Card>
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-155 transition-all">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Paid Invoices</span>
+            <CheckCircle className="w-4.5 h-4.5 text-emerald-555" />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-3 text-emerald-600">{paidCount} Paid</span>
+        </Card>
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-155 transition-all">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Pending Payments</span>
+            <AlertTriangle className="w-4.5 h-4.5 text-amber-500" />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-3 text-amber-500">{pendingCount} Partial</span>
+        </Card>
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-155 transition-all">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Overdue Ledger</span>
+            <AlertTriangle className="w-4.5 h-4.5 text-red-500" />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-3 text-red-500">{overdueCount} Unpaid</span>
+        </Card>
+      </div>
+
       {/* Invoices table list */}
-      <Card className="p-0 overflow-hidden bg-white border border-slate-100 dark:border-slate-700">
+      <Card title="Billing Ledger Records" subtitle="Overview of all patient account receipts" className="p-0 overflow-hidden bg-white border border-slate-100 dark:border-slate-700">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 font-bold text-slate-400 uppercase">
@@ -166,16 +204,16 @@ export const Billing = () => {
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-705/50">
               {bills.map((bill) => (
                 <tr key={bill.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-750/30 transition-colors">
                   <td className="px-6 py-4 font-mono font-bold text-slate-400">{bill.id.substring(0, 8)}</td>
                   <td className="px-6 py-4">
-                    <p className="font-bold text-slate-800 dark:text-slate-200">{bill.patient?.name}</p>
-                    <p className="text-[10px] text-slate-400">ID: {bill.patientId.substring(0, 8)}</p>
+                    <p className="font-bold text-slate-850 dark:text-slate-200">{bill.patient?.name}</p>
+                    <p className="text-[10px] text-slate-400 font-mono">ID: {bill.patientId.substring(0, 8)}</p>
                   </td>
                   <td className="px-6 py-4 text-slate-500">{bill.date}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">${bill.total.toFixed(2)}</td>
+                  <td className="px-6 py-4 font-bold text-slate-850 dark:text-slate-200">${bill.total.toFixed(2)}</td>
                   <td className="px-6 py-4 text-slate-500">{bill.paymentMode}</td>
                   <td className="px-6 py-4">
                     <Badge variant={
@@ -189,7 +227,7 @@ export const Billing = () => {
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => handleDownloadPDF(bill)}
-                        className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        className="text-slate-400 hover:text-primary-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                         title="Download PDF"
                       >
                         <Download className="w-4.5 h-4.5" />
@@ -199,7 +237,7 @@ export const Billing = () => {
                       {(isAdmin || isReceptionist) && bill.status !== 'Paid' && (
                         <button
                           onClick={() => handlePayBill(bill.id, bill.paymentMode)}
-                          className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 p-1.5 rounded-lg transition-colors font-semibold"
+                          className="text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/20 px-2 py-1 border border-primary-200 dark:border-primary-900 rounded-lg transition-colors font-bold text-[10px]"
                           title="Mark as Paid"
                         >
                           Mark Paid
@@ -271,7 +309,7 @@ export const Billing = () => {
               <button
                 type="button"
                 onClick={addItemRow}
-                className="text-xs text-teal-600 hover:text-teal-700 font-bold flex items-center gap-1 cursor-pointer"
+                className="text-xs text-primary-600 hover:text-primary-700 font-bold flex items-center gap-1 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" /> Add Item Line
               </button>
@@ -309,7 +347,7 @@ export const Billing = () => {
                     type="button"
                     onClick={() => removeItemRow(idx)}
                     disabled={items.length === 1}
-                    className="text-slate-400 hover:text-red-500 p-2 disabled:opacity-30 cursor-pointer"
+                    className="text-slate-400 hover:text-red-500 p-2 disabled:opacity-30 cursor-pointer animate-fade-in"
                   >
                     <Trash className="w-4.5 h-4.5" />
                   </button>
@@ -319,12 +357,12 @@ export const Billing = () => {
           </div>
 
           {/* Summaries Block */}
-          <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4 flex flex-col items-end gap-2 text-xs text-slate-500">
+          <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4 flex flex-col items-end gap-2 text-xs text-slate-505 font-semibold">
             <div>
-              Subtotal: <span className="font-bold text-slate-700 dark:text-slate-350 ml-2">${subtotal.toFixed(2)}</span>
+              Subtotal: <span className="font-bold text-slate-750 dark:text-slate-200 ml-2">${subtotal.toFixed(2)}</span>
             </div>
             <div>
-              VAT (5%): <span className="font-bold text-slate-700 dark:text-slate-350 ml-2">${tax.toFixed(2)}</span>
+              VAT (5%): <span className="font-bold text-slate-750 dark:text-slate-200 ml-2">${tax.toFixed(2)}</span>
             </div>
             <div className="flex items-center gap-2">
               <span>Apply Discount ($):</span>
@@ -332,11 +370,11 @@ export const Billing = () => {
                 type="number"
                 value={discount}
                 onChange={(e) => setDiscount(Number(e.target.value))}
-                className="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 text-right px-2 py-1 rounded outline-none"
+                className="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-right px-2 py-1 rounded outline-none"
               />
             </div>
-            <div className="text-sm font-bold text-teal-600 dark:text-teal-400 mt-2">
-              Grand Total: <span className="text-lg ml-2">${grandTotal.toFixed(2)}</span>
+            <div className="text-sm font-bold text-primary-600 dark:text-primary-400 mt-2">
+              Grand Total: <span className="text-lg ml-2 font-extrabold">${grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -349,4 +387,5 @@ export const Billing = () => {
     </div>
   );
 };
+
 export default Billing;

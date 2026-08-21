@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { pharmacyService } from '../services/hmsServices.js';
-import { Plus, Edit2, Trash2, ShieldAlert, Sparkles, RefreshCw, Layers } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 import { Button, Input, Select, Card, Badge, Modal } from '../components/UI.jsx';
 
 export const Pharmacy = () => {
@@ -10,6 +10,10 @@ export const Pharmacy = () => {
   const toast = useToast();
 
   const [medicines, setMedicines] = useState([]);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [stockFilter, setStockFilter] = useState('All');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('CREATE');
   const [editingMedId, setEditingMedId] = useState(null);
@@ -104,7 +108,7 @@ export const Pharmacy = () => {
       stock: med.stock,
       unitPrice: med.unitPrice,
       expiryDate: med.expiryDate,
-      supplier: med.supplier
+      supplier: med.supplier || ''
     });
     setIsModalOpen(true);
   };
@@ -126,13 +130,35 @@ export const Pharmacy = () => {
     }
   };
 
+  // Dynamic statistics
+  const stats = {
+    total: medicines.length,
+    inStock: medicines.filter(m => m.stock > 10).length,
+    lowStock: medicines.filter(m => m.stock <= 10 && m.stock > 0).length,
+    outOfStock: medicines.filter(m => m.stock === 0).length
+  };
+
+  // Filtered meds
+  const filteredMeds = medicines.filter(m => {
+    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.category.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === 'All' || m.category === categoryFilter;
+    const matchesStock = stockFilter === 'All' 
+      ? true 
+      : stockFilter === 'Low' 
+        ? m.stock <= 10 && m.stock > 0
+        : stockFilter === 'Out' 
+          ? m.stock === 0
+          : m.stock > 10;
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
       {/* Title */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center select-none">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white">Pharmacy Stock Inventory</h1>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Monitor medication levels, restock alerts, and expiration calendars.</p>
+          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">Pharmacy Catalog</h1>
+          <p className="text-slate-400 text-xs mt-1">Manage hospital pharmacy stocks and reorder thresholds.</p>
         </div>
         {(isAdmin || isPharmacist) && (
           <Button size="sm" variant="primary" icon={Plus} onClick={openCreateModal}>
@@ -141,93 +167,139 @@ export const Pharmacy = () => {
         )}
       </div>
 
-      {/* Grid of Medicines cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {medicines.map((med) => (
-          <Card 
-            key={med.id} 
-            className={`flex flex-col justify-between relative border ${
-              med.isLowStock 
-                ? 'border-red-300 dark:border-red-900/50 bg-red-50/5 dark:bg-red-950/5' 
-                : med.isNearExpiry 
-                  ? 'border-amber-300 dark:border-amber-900/50 bg-amber-50/5' 
-                  : 'border-slate-100'
-            }`}
-            headerActions={(isAdmin || isPharmacist) && (
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => openRestockModal(med)}
-                  className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  title="Restock"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => openEditModal(med)}
-                  className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  title="Edit"
-                >
-                  <Edit2 className="w-4.5 h-4.5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(med.id)}
-                  className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  title="Remove Product"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          >
-            {/* Title / Info */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-tight">{med.name}</h3>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 block">{med.category}</span>
-                </div>
-                <Badge variant={med.isLowStock ? 'danger' : med.isNearExpiry ? 'warning' : 'success'}>
-                  {med.isLowStock ? 'Low Stock' : med.isNearExpiry ? 'Expiring Soon' : 'In Stock'}
-                </Badge>
-              </div>
-
-              {/* Warnings details */}
-              {med.isLowStock && (
-                <div className="flex items-center gap-1.5 text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-950/20 px-2 py-1 rounded">
-                  <ShieldAlert className="w-3.5 h-3.5" /> CRITICAL: Stock drops below threshold ({med.stock} left)
-                </div>
-              )}
-              {med.isNearExpiry && !med.isLowStock && (
-                <div className="flex items-center gap-1.5 text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded">
-                  <ShieldAlert className="w-3.5 h-3.5" /> WARNING: Expires soon ({med.expiryDate})
-                </div>
-              )}
-            </div>
-
-            {/* Bottom pricing / stock details */}
-            <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4 mt-4 flex justify-between items-end text-xs">
-              <div>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Stock Quantity</span>
-                <span className={`text-base font-bold ${med.stock <= 10 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>
-                  {med.stock} Units
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Price per Unit</span>
-                <span className="text-base font-bold text-teal-600 dark:text-teal-400">
-                  ${med.unitPrice.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            {med.supplier && (
-              <div className="text-[8.5px] text-slate-400 mt-2 truncate">
-                Supplier: {med.supplier}
-              </div>
-            )}
-          </Card>
-        ))}
+      {/* KPI Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Medicines</span>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-2">{stats.total}</span>
+        </Card>
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">In Stock</span>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-2 text-emerald-600">{stats.inStock}</span>
+        </Card>
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Low Stock Alerts</span>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-2 text-amber-500">{stats.lowStock}</span>
+        </Card>
+        <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Out of Stock</span>
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-white mt-2 text-red-500">{stats.outOfStock}</span>
+        </Card>
       </div>
+
+      {/* AI Prediction Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-primary-50/70 border border-primary-200 text-primary-850 dark:bg-slate-900/50 dark:border-slate-800 text-xs p-4 rounded-2xl flex items-center gap-3 select-none leading-relaxed font-semibold">
+          <Sparkles className="w-5 h-5 text-primary-650 flex-shrink-0 animate-pulse" />
+          <span><strong>AI Prediction:</strong> Paracetamol stock may run out in 5 days based on recent prescription patterns.</span>
+        </div>
+        <div className="bg-primary-50/70 border border-primary-200 text-primary-850 dark:bg-slate-900/50 dark:border-slate-800 text-xs p-4 rounded-2xl flex items-center gap-3 select-none leading-relaxed font-semibold">
+          <Sparkles className="w-5 h-5 text-primary-650 flex-shrink-0 animate-pulse" />
+          <span><strong>AI Demand Forecast:</strong> Amoxicillin demand is expected to increase next week. System alerts are armed.</span>
+        </div>
+      </div>
+
+      {/* Filter panel */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-2xl shadow-sm select-none">
+        <Input
+          id="f-search"
+          placeholder="Search by medicine name..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:col-span-2"
+        />
+        <Select
+          id="f-cat"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          options={[
+            { value: 'All', label: 'All Categories' },
+            { value: 'Antibiotics', label: 'Antibiotics' },
+            { value: 'Analgesics', label: 'Analgesics' },
+            { value: 'Antihypertensives', label: 'Antihypertensives' },
+            { value: 'Statins', label: 'Statins' },
+            { value: 'Antidiabetics', label: 'Antidiabetics' }
+          ]}
+        />
+        <Select
+          id="f-stock"
+          value={stockFilter}
+          onChange={(e) => setStockFilter(e.target.value)}
+          options={[
+            { value: 'All', label: 'All Stock Levels' },
+            { value: 'Low', label: 'Low Stock' },
+            { value: 'Out', label: 'Out of Stock' },
+            { value: 'Normal', label: 'Healthy Stock' }
+          ]}
+        />
+      </div>
+
+      {/* Medicines Table */}
+      <Card title="Medication Catalog List" subtitle="Monitored stock items ledger" className="overflow-x-auto">
+        <table className="w-full text-left border-collapse text-xs select-none">
+          <thead>
+            <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+              <th className="py-3 px-4">Medicine Name</th>
+              <th className="py-3 px-4">Category</th>
+              <th className="py-3 px-4">Price</th>
+              <th className="py-3 px-4">Stock Quantity</th>
+              <th className="py-3 px-4">Expiry Date</th>
+              <th className="py-3 px-4">Supplier</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-850">
+            {filteredMeds.map(med => (
+              <tr key={med.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-750/10 transition-colors">
+                <td className="py-3 px-4 font-bold text-slate-850 dark:text-slate-200">{med.name}</td>
+                <td className="py-3 px-4 text-slate-500">{med.category}</td>
+                <td className="py-3 px-4 text-primary-600 font-semibold">${med.unitPrice.toFixed(2)}</td>
+                <td className="py-3 px-4 font-bold text-slate-750 dark:text-slate-250">
+                  {med.stock} Units
+                </td>
+                <td className="py-3 px-4 text-slate-500">{med.expiryDate}</td>
+                <td className="py-3 px-4 text-slate-500">{med.supplier || 'N/A'}</td>
+                <td className="py-3 px-4">
+                  <Badge variant={med.stock === 0 ? 'danger' : med.stock <= 10 ? 'warning' : 'success'}>
+                    {med.stock === 0 ? 'Out of Stock' : med.stock <= 10 ? 'Low Stock' : 'In Stock'}
+                  </Badge>
+                </td>
+                <td className="py-3 px-4 text-right flex justify-end gap-1.5 mt-0.5">
+                  {(isAdmin || isPharmacist) && (
+                    <>
+                      <Button size="xs" variant="secondary" icon={RefreshCw} onClick={() => openRestockModal(med)}>
+                        Restock
+                      </Button>
+                      <button
+                        onClick={() => openEditModal(med)}
+                        className="text-slate-400 hover:text-primary-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(med.id)}
+                        className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {filteredMeds.length === 0 && (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-slate-405 text-sm">
+                  No medication records match the filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Card>
 
       {/* CREATE/EDIT MEDICATION MODAL */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalMode === 'CREATE' ? 'Register New Medication Product' : 'Modify Medication Profile'}>
@@ -249,72 +321,73 @@ export const Pharmacy = () => {
               options={[
                 { value: 'Antibiotics', label: 'Antibiotics' },
                 { value: 'Analgesics', label: 'Analgesics' },
-                { value: 'Cardiovascular', label: 'Cardiovascular' },
-                { value: 'Antidiabetic', label: 'Antidiabetic' },
-                { value: 'Neurological', label: 'Neurological' },
-                { value: 'Anesthetics', label: 'Anesthetics' }
+                { value: 'Antihypertensives', label: 'Antihypertensives' },
+                { value: 'Statins', label: 'Statins' },
+                { value: 'Antidiabetics', label: 'Antidiabetics' }
               ]}
             />
             <Input 
-              label="Supplier Manufacturer" 
-              id="med-supplier" 
-              value={form.supplier} 
-              onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-              placeholder="Apex Labs Corp" 
-              required
+              label="Price per Unit ($)" 
+              id="med-price" 
+              type="number"
+              step="0.01"
+              value={form.unitPrice} 
+              onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
+              placeholder="10.00" 
+              required 
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <Input 
-              label="Initial Stock" 
+              label="Initial Stock Quantity" 
               id="med-stock" 
               type="number"
               value={form.stock} 
               onChange={(e) => setForm({ ...form, stock: e.target.value })}
+              placeholder="100" 
               required 
+              disabled={modalMode === 'EDIT'}
             />
             <Input 
-              label="Unit Price ($)" 
-              id="med-price" 
-              type="number" 
-              step="0.01"
-              value={form.unitPrice} 
-              onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-              required 
-            />
-            <Input 
-              label="Expiry Date" 
-              id="med-expiry" 
+              label="Expiration Date" 
+              id="med-exp" 
               type="date"
               value={form.expiryDate} 
               onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
               required 
             />
           </div>
+          <Input 
+            label="Supplier Name" 
+            id="med-supp" 
+            value={form.supplier} 
+            onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+            placeholder="PharmaCorp Distributors" 
+            required 
+          />
 
-          <div className="flex justify-end gap-2 mt-2">
+          <div className="flex justify-end gap-2 mt-4">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="primary">{modalMode === 'CREATE' ? 'Register' : 'Save Changes'}</Button>
+            <Button type="submit" variant="primary">{modalMode === 'CREATE' ? 'Register Product' : 'Save Changes'}</Button>
           </div>
         </form>
       </Modal>
 
-      {/* RESTOCK MEDICATION MODAL */}
-      <Modal isOpen={isRestockOpen} onClose={() => setIsRestockOpen(false)} title={`Restock Product: ${selectedMed?.name}`}>
+      {/* RESTOCK MODAL */}
+      <Modal isOpen={isRestockOpen} onClose={() => setIsRestockOpen(false)} title="Restock Medication Inventory">
         <form onSubmit={handleRestockSubmit} className="flex flex-col gap-4">
-          <Input 
-            label="Additional Units Quantity to Add" 
-            id="restock-qty" 
+          <div className="text-sm select-none">
+            Selected product: <strong className="text-slate-800 dark:text-slate-100">{selectedMed?.name}</strong> (Current Stock: {selectedMed?.stock} units)
+          </div>
+          <Input
+            label="Additional Restock Quantity"
+            id="re-qty"
             type="number"
-            value={restockQty} 
+            value={restockQty}
             onChange={(e) => setRestockQty(Number(e.target.value))}
-            required 
-            min="1"
+            required
           />
-          <p className="text-[10px] text-slate-400">
-            Current catalog stock: {selectedMed?.stock} units. New calculated catalog stock will be {(selectedMed?.stock || 0) + Number(restockQty)} units.
-          </p>
-          <div className="flex justify-end gap-2 mt-2">
+          <div className="flex justify-end gap-2 mt-4">
             <Button type="button" variant="secondary" onClick={() => setIsRestockOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary">Confirm Restock</Button>
           </div>
@@ -323,4 +396,5 @@ export const Pharmacy = () => {
     </div>
   );
 };
+
 export default Pharmacy;

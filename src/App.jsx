@@ -5,17 +5,29 @@ import { useToast } from './context/ToastContext.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import Header from './components/Header.jsx';
 import Login from './pages/Login.jsx';
+import SignUp from './pages/SignUp.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import RoleSelection from './pages/RoleSelection.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Patients from './pages/Patients.jsx';
 import Doctors from './pages/Doctors.jsx';
 import Appointments from './pages/Appointments.jsx';
-import Wards from './pages/Wards.jsx';
+import BedManagement from './pages/BedManagement.jsx';
 import Billing from './pages/Billing.jsx';
 import Pharmacy from './pages/Pharmacy.jsx';
 import Prescriptions from './pages/Prescriptions.jsx';
-import LabReports from './pages/LabReports.jsx';
+import Laboratory from './pages/Laboratory.jsx';
+import Departments from './pages/Departments.jsx';
+import Emergency from './pages/Emergency.jsx';
+import AIAssistant from './pages/AIAssistant.jsx';
+import Messages from './pages/Messages.jsx';
+import CalendarPage from './pages/CalendarPage.jsx';
+import Reports from './pages/Reports.jsx';
+import Notifications from './pages/Notifications.jsx';
+import Profile from './pages/Profile.jsx';
 import Settings from './pages/Settings.jsx';
 import Loader from './components/Loader.jsx';
+import NotFound from './components/NotFound.jsx';
 
 // Role-Guard wrapper
 const RouteGuard = ({ children, allowedRoles }) => {
@@ -25,8 +37,8 @@ const RouteGuard = ({ children, allowedRoles }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-teal-650 font-bold text-sm">
-        Careflow HMS Loading...
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-primary-600 font-bold text-sm">
+        HEALTH HUB Loading...
       </div>
     );
   }
@@ -36,7 +48,6 @@ const RouteGuard = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Notify access block
     toast.error(`Access Denied: Your role (${user.role}) is unauthorized to view ${location.pathname}.`);
     return <Navigate to="/dashboard" replace />;
   }
@@ -51,12 +62,12 @@ export const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
 
-  // Trigger Lottie loader on location/tab changes
+  // Trigger brief loader on location/tab changes for smooth transition
   useEffect(() => {
     setRouteLoading(true);
     const timer = setTimeout(() => {
       setRouteLoading(false);
-    }, 4000);
+    }, 6000);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
@@ -87,8 +98,8 @@ export const App = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-teal-600 font-bold text-sm select-none">
-        Booting Careflow HMS Core...
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-primary-600 font-bold text-sm select-none animate-pulse">
+        Booting HEALTH HUB Core...
       </div>
     );
   }
@@ -121,10 +132,24 @@ export const App = () => {
             {/* Inner Route view panels */}
             <main className="flex-grow p-6 overflow-y-auto">
               <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/signup" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/forgot-password" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/role-selection" element={<Navigate to="/dashboard" replace />} />
+
                 
                 <Route 
                   path="/patients" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
+                      <Patients />
+                    </RouteGuard>
+                  } 
+                />
+                <Route 
+                  path="/patients/:id" 
                   element={
                     <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
                       <Patients />
@@ -135,7 +160,15 @@ export const App = () => {
                 <Route 
                   path="/doctors" 
                   element={
-                    <RouteGuard allowedRoles={['Admin']}>
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
+                      <Doctors />
+                    </RouteGuard>
+                  } 
+                />
+                <Route 
+                  path="/doctors/:id" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
                       <Doctors />
                     </RouteGuard>
                   } 
@@ -144,17 +177,33 @@ export const App = () => {
                 <Route 
                   path="/appointments" 
                   element={
-                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist', 'Patient']}>
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
                       <Appointments />
                     </RouteGuard>
                   } 
                 />
                 
                 <Route 
+                  path="/beds" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Receptionist', 'Doctor']}>
+                      <BedManagement />
+                    </RouteGuard>
+                  } 
+                />
+                <Route 
                   path="/wards" 
                   element={
-                    <RouteGuard allowedRoles={['Admin', 'Receptionist']}>
-                      <Wards />
+                    <RouteGuard allowedRoles={['Admin', 'Receptionist', 'Doctor']}>
+                      <BedManagement />
+                    </RouteGuard>
+                  } 
+                />
+                <Route 
+                  path="/bed-management" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Receptionist', 'Doctor']}>
+                      <BedManagement />
                     </RouteGuard>
                   } 
                 />
@@ -162,7 +211,7 @@ export const App = () => {
                 <Route 
                   path="/billing" 
                   element={
-                    <RouteGuard allowedRoles={['Admin', 'Receptionist', 'Patient']}>
+                    <RouteGuard allowedRoles={['Admin', 'Receptionist']}>
                       <Billing />
                     </RouteGuard>
                   } 
@@ -171,7 +220,7 @@ export const App = () => {
                 <Route 
                   path="/pharmacy" 
                   element={
-                    <RouteGuard allowedRoles={['Admin', 'Pharmacist']}>
+                    <RouteGuard allowedRoles={['Admin', 'Pharmacist', 'Doctor']}>
                       <Pharmacy />
                     </RouteGuard>
                   } 
@@ -180,17 +229,97 @@ export const App = () => {
                 <Route 
                   path="/prescriptions" 
                   element={
-                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Pharmacist', 'Patient']}>
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Pharmacist']}>
                       <Prescriptions />
                     </RouteGuard>
                   } 
                 />
                 
                 <Route 
+                  path="/laboratory" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor']}>
+                      <Laboratory />
+                    </RouteGuard>
+                  } 
+                />
+                <Route 
                   path="/lab-reports" 
                   element={
-                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Patient']}>
-                      <LabReports />
+                    <RouteGuard allowedRoles={['Admin', 'Doctor']}>
+                      <Laboratory />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/departments" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
+                      <Departments />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/emergency" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
+                      <Emergency />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/ai-assistant" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist', 'Pharmacist']}>
+                      <AIAssistant />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/messages" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist', 'Pharmacist']}>
+                      <Messages />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/calendar" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist']}>
+                      <CalendarPage />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/reports" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor']}>
+                      <Reports />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/notifications" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist', 'Pharmacist']}>
+                      <Notifications />
+                    </RouteGuard>
+                  } 
+                />
+
+                <Route 
+                  path="/profile" 
+                  element={
+                    <RouteGuard allowedRoles={['Admin', 'Doctor', 'Receptionist', 'Pharmacist']}>
+                      <Profile />
                     </RouteGuard>
                   } 
                 />
@@ -200,18 +329,24 @@ export const App = () => {
                   element={<Settings isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />} 
                 />
 
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
           </div>
         </div>
       ) : (
         <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/role-selection" element={<RoleSelection />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       )}
     </div>
   );
 };
+
 export default App;
+

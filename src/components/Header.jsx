@@ -9,11 +9,12 @@ import {
   User, 
   ArrowRight, 
   X,
-  Plus,
   Stethoscope,
   Calendar,
   LogOut,
-  HelpCircle
+  Settings,
+  MessageSquare,
+  ChevronDown
 } from 'lucide-react';
 
 export const Header = ({ isCollapsed, setIsCollapsed }) => {
@@ -56,7 +57,7 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
     try {
       const logs = await activityService.getAll();
       setNotifications(logs.slice(0, 8)); // Limit to 8 items
-      setUnreadNotifications(logs.length > 0 ? 3 : 0); // Fake a few unread
+      setUnreadNotifications(logs.length > 0 ? 3 : 0); // Fake unread
     } catch (err) {
       console.error(err);
     }
@@ -64,7 +65,7 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 10000); // Check every 10s
+    const interval = setInterval(loadNotifications, 15000); // Check every 15s
     return () => clearInterval(interval);
   }, []);
 
@@ -104,7 +105,7 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
           type: 'doctor',
           title: d.name,
           subtitle: `Doctor (Specialist: ${d.specialization})`,
-          link: `/patients`, // Nav to patients or doctor dashboard
+          link: `/doctors?id=${d.id}`,
           icon: Stethoscope
         });
       });
@@ -143,7 +144,7 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
       <div className="flex items-center gap-4">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+          className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <Menu className="w-5 h-5" />
@@ -157,14 +158,14 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
             </div>
             <input
               type="text"
-              placeholder="Search patients, doctors, records..."
+              placeholder="Search for patients, appointments, doctors..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setShowSearchDropdown(true);
               }}
               onFocus={() => setShowSearchDropdown(true)}
-              className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-sm pl-10 pr-4 py-2 rounded-xl outline-none focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-slate-800 dark:text-slate-100 transition-all"
+              className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 hover:border-slate-350 dark:hover:border-slate-600 text-sm pl-10 pr-4 py-2 rounded-xl outline-none focus:bg-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-slate-800 dark:text-slate-100 transition-all"
             />
             {searchQuery && (
               <button 
@@ -178,7 +179,7 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
 
           {/* Search Dropdown */}
           {showSearchDropdown && searchResults.length > 0 && (
-            <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-premium dark:shadow-premium-dark p-2 animate-fade-in max-h-80 overflow-y-auto">
+            <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-premium dark:shadow-premium-dark p-2 animate-fade-in max-h-80 overflow-y-auto z-50">
               <div className="text-[10px] font-bold text-slate-400 uppercase px-3 py-1 select-none">
                 Search Results ({searchResults.length})
               </div>
@@ -188,10 +189,10 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
                   <button
                     key={idx}
                     onClick={() => handleResultClick(res.link)}
-                    className="w-full flex items-center justify-between text-left p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors group"
+                    className="w-full flex items-center justify-between text-left p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0">
                         <ResIcon className="w-4.5 h-4.5" />
                       </div>
                       <div className="min-w-0">
@@ -199,15 +200,16 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{res.subtitle}</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-teal-600 transition-colors opacity-0 group-hover:opacity-100" />
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-350 group-hover:text-primary-600 transition-colors opacity-0 group-hover:opacity-100" />
                   </button>
                 );
               })}
             </div>
           )}
 
+          {/* Fallback no results */}
           {showSearchDropdown && searchQuery && searchResults.length === 0 && (
-            <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-premium p-4 text-center text-xs text-slate-400">
+            <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-premium p-4 text-center text-xs text-slate-400 z-50">
               No medical logs match "{searchQuery}"
             </div>
           )}
@@ -223,7 +225,7 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
               setShowNotifications(!showNotifications);
               setUnreadNotifications(0);
             }}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors relative"
+            className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-755 transition-colors relative cursor-pointer"
           >
             <Bell className="w-5 h-5" />
             {unreadNotifications > 0 && (
@@ -236,16 +238,16 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
             <div className="absolute top-12 right-0 w-80 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-premium dark:shadow-premium-dark p-2 animate-fade-in z-50">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-3 py-2 mb-2 select-none">
                 <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200">System Activity Feed</h4>
-                <span className="text-[10px] text-teal-600 font-bold uppercase">Live</span>
+                <span className="text-[10px] text-primary-600 font-bold uppercase">Live</span>
               </div>
               <div className="max-h-64 overflow-y-auto flex flex-col gap-1 pr-1">
                 {notifications.map((log) => (
                   <div
                     key={log.id}
-                    className="p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors flex flex-col gap-0.5 text-xs"
+                    className="p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors flex flex-col gap-0.5 text-xs text-left"
                   >
-                    <div className="flex justify-between items-center text-[10px] text-slate-400">
-                      <span className="font-bold text-teal-600">{log.user?.name} ({log.user?.role})</span>
+                    <div className="flex justify-between items-center text-[10px] text-primary-600">
+                      <span className="font-bold text-primary-600">{log.user?.name} ({log.user?.role})</span>
                       <span>{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p className="text-slate-600 dark:text-slate-350">{log.details}</p>
@@ -261,11 +263,29 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
           )}
         </div>
 
+        {/* Messages icon */}
+        <button
+          onClick={() => navigate('/messages')}
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-755 transition-colors cursor-pointer"
+          title="Messages Lounge"
+        >
+          <MessageSquare className="w-5 h-5" />
+        </button>
+
+        {/* Calendar icon */}
+        <button
+          onClick={() => navigate('/calendar')}
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-755 transition-colors cursor-pointer"
+          title="Surgery Calendar"
+        >
+          <Calendar className="w-5 h-5" />
+        </button>
+
         {/* User Profile dropdown shortcut */}
         <div ref={profileRef} className="relative flex items-center">
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-750 p-1.5 rounded-xl transition-all"
+            className="flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-750 p-1.5 rounded-xl transition-all cursor-pointer"
           >
             <img
               src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
@@ -273,23 +293,24 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
               className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
             />
             <div className="hidden lg:block text-left select-none pr-1">
-              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200">{user?.name}</h4>
-              <p className="text-[9px] text-slate-400 uppercase tracking-wider">{user?.role}</p>
+              <h4 className="text-xs font-bold text-slate-705 dark:text-slate-200">{user?.name || 'Admin'}</h4>
+              <p className="text-[9px] text-slate-400 uppercase tracking-wider">{user?.role === 'Admin' ? 'Super Administrator' : user?.role || 'Staff Member'}</p>
             </div>
+            <ChevronDown className="w-4 h-4 text-slate-400" />
           </button>
 
           {showProfileMenu && (
             <div className="absolute top-12 right-0 w-48 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-premium dark:shadow-premium-dark p-1.5 animate-fade-in z-50">
               <button
-                onClick={() => { navigate('/settings'); setShowProfileMenu(false); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-medium transition-colors"
+                onClick={() => { navigate('/profile'); setShowProfileMenu(false); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-medium transition-colors cursor-pointer"
               >
                 <User className="w-4 h-4 text-slate-400" />
-                Hospital Profile
+                My Profile Settings
               </button>
               <button
                 onClick={() => { logout(); setShowProfileMenu(false); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-bold transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-bold transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
@@ -301,4 +322,5 @@ export const Header = ({ isCollapsed, setIsCollapsed }) => {
     </header>
   );
 };
+
 export default Header;

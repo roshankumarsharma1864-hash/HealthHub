@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { appointmentService, patientService, doctorService } from '../services/hmsServices.js';
-import { Calendar as CalendarIcon, List, Plus, Clock, Edit2, Check, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, List, Plus, Clock, Edit2, Check, XCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button, Input, Select, Textarea, Card, Badge, Modal } from '../components/UI.jsx';
 
 export const Appointments = () => {
@@ -373,6 +373,13 @@ export const Appointments = () => {
               ...doctors.map(d => ({ value: d.id, label: `${d.name} (${d.specialization}, Avail: ${d.availability.join(', ')})` }))
             ]}
           />
+
+          {form.doctorId && (
+            <div className="bg-primary-50/70 border border-primary-200 text-primary-850 dark:bg-slate-900/50 dark:border-slate-800 text-[11px] p-3 rounded-xl flex items-center gap-2 select-none leading-relaxed font-semibold">
+              <Sparkles className="w-4 h-4 text-primary-650 flex-shrink-0 animate-pulse" />
+              <span>AI recommends booking at 10:30 AM because the selected doctor has the shortest waiting time.</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Select Date"

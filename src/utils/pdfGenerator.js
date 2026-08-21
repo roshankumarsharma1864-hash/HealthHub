@@ -3,26 +3,26 @@ import 'jspdf-autotable';
 
 // Custom header renderer for branding
 const applyLetterhead = (doc, title, settings) => {
-  // Primary brand color: Violet
-  doc.setFillColor(109, 40, 217); // Violet-700
+  // Primary brand color: Royal Blue
+  doc.setFillColor(30, 64, 175); // Royal Blue
   doc.rect(0, 0, 210, 8, 'F');
 
   // Secondary bar
-  doc.setFillColor(139, 92, 246); // Violet-500
+  doc.setFillColor(6, 182, 212); // Cyan/Teal Secondary
   doc.rect(0, 8, 210, 2, 'F');
 
   // Hospital Brand Title
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(22);
-  doc.setTextColor(109, 40, 217);
-  doc.text(settings.hospitalName || 'Careflow Medical Center', 15, 30);
+  doc.setTextColor(30, 64, 175);
+  doc.text(settings.hospitalName || 'HEALTH HUB', 15, 30);
 
   // Subtitle/Info
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139); // slate-500
   doc.text(settings.hospitalAddress || '750 Health Plaza Blvd, Boston, MA', 15, 36);
-  doc.text(`Phone: ${settings.hospitalPhone || '+1 (555) 100-2000'}  |  Email: ${settings.hospitalEmail || 'contact@careflow.com'}`, 15, 41);
+  doc.text(`Phone: ${settings.hospitalPhone || '+1 (555) 100-2000'}  |  Email: ${settings.hospitalEmail || 'contact@healthhub.com'}`, 15, 41);
 
   // Document Title Banner
   doc.setFontSize(14);
@@ -98,7 +98,7 @@ export const pdfGenerator = {
       startY: 83,
       head: [['#', 'Description', 'Qty', 'Unit Price', 'Total']],
       body: tableBody,
-      headStyles: { fillColor: [109, 40, 217], textColor: [255, 255, 255] },
+      headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255] },
       margin: { left: 15, right: 15 },
       theme: 'striped',
       styles: { fontSize: 9 }
@@ -122,7 +122,7 @@ export const pdfGenerator = {
 
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(109, 40, 217);
+    doc.setTextColor(30, 64, 175);
     doc.text('Grand Total:', 130, finalY + 16);
     doc.text(`$${bill.total.toFixed(2)}`, 175, finalY + 16, { align: 'right' });
 
@@ -161,7 +161,7 @@ export const pdfGenerator = {
     // Rx symbol
     doc.setFont('Times', 'italic');
     doc.setFontSize(26);
-    doc.setTextColor(109, 40, 217);
+    doc.setTextColor(30, 64, 175);
     doc.text('Rx', 15, 87);
 
     // Medicines Table
@@ -176,7 +176,7 @@ export const pdfGenerator = {
       startY: 92,
       head: [['#', 'Medicine Name', 'Dosage Instructions', 'Duration']],
       body: tableBody,
-      headStyles: { fillColor: [109, 40, 217], textColor: [255, 255, 255] },
+      headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255] },
       margin: { left: 15, right: 15 },
       theme: 'grid',
       styles: { fontSize: 9 }

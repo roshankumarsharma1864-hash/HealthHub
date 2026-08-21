@@ -29,10 +29,10 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
       } else {
         // Seeding defaults
         const defaults = {
-          hospitalName: 'Careflow Medical Center',
+          hospitalName: 'HEALTH HUB',
           hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
           hospitalPhone: '+1 (555) 100-2000',
-          hospitalEmail: 'contact@careflowmedical.com'
+          hospitalEmail: 'contact@healthhub.com'
         };
         setHProfile(defaults);
       }
@@ -252,7 +252,7 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
             type="email"
             value={userForm.email}
             onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-            placeholder="miller@careflow.com"
+            placeholder="miller@healthhub.com"
             required
           />
           <Input

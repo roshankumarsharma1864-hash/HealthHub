@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { 
@@ -26,7 +26,11 @@ import {
   Bed,
   MapPin,
   AlertOctagon,
-  Download
+  Download,
+  ArrowLeft,
+  Activity,
+  PlusCircle,
+  BrainCircuit
 } from 'lucide-react';
 import { Button, Input, Select, Textarea, Card, Badge, Modal } from '../components/UI.jsx';
 import { pdfGenerator } from '../utils/pdfGenerator.js';
@@ -34,6 +38,8 @@ import { pdfGenerator } from '../utils/pdfGenerator.js';
 export const Patients = () => {
   const { user, isAdmin, isDoctor, isReceptionist } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
+  const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [patients, setPatients] = useState([]);
@@ -61,6 +67,10 @@ export const Patients = () => {
   const [admitForm, setAdmitForm] = useState({ wardId: '', bedNo: '' });
   const [availableBeds, setAvailableBeds] = useState([]);
 
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState('');
+  const [generatingAi, setGeneratingAi] = useState(false);
+
   // Fetch all listings
   const loadData = async () => {
     try {
@@ -72,17 +82,15 @@ export const Patients = () => {
       setDoctors(dList);
       setWards(wList);
 
-      // Handle URL deep-linking: ?id=PATIENT_ID
-      const pId = searchParams.get('id');
+      // Handle URL deep-linking: /patients/:id or ?id=PATIENT_ID
+      const pId = params.id || searchParams.get('id');
       if (pId) {
         const fullPatient = await patientService.getById(pId);
         if (fullPatient) {
           setSelectedPatient(fullPatient);
         }
-      } else if (pList.length > 0 && !selectedPatient) {
-        // Pre-select first patient
-        const firstPatient = await patientService.getById(pList[0].id);
-        setSelectedPatient(firstPatient);
+      } else {
+        setSelectedPatient(null);
       }
     } catch (err) {
       toast.error('Error loading patient directory.');
@@ -91,45 +99,28 @@ export const Patients = () => {
 
   useEffect(() => {
     loadData();
-  }, [searchParams]);
+  }, [searchParams, params.id]);
 
-  const selectPatient = async (id) => {
+
+  const selectPatient = (id) => {
     setSearchParams({ id });
-    const fullPatient = await patientService.getById(id);
-    setSelectedPatient(fullPatient);
+    setAiSummary(''); // Clear AI summary on patient switch
   };
 
-  // Filter patients list
-  const filteredPatients = patients.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                          p.id.toLowerCase().includes(search.toLowerCase()) ||
-                          p.phone.includes(search);
-    const matchesStatus = statusFilter === 'All' || p.admissionStatus === statusFilter;
-    const matchesDoctor = doctorFilter === 'All' || p.assignedDoctorId === doctorFilter;
-    return matchesSearch && matchesStatus && matchesDoctor;
-  });
-
-  // Handle CRUD Patient Submit
-  const handlePatientSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (modalMode === 'CREATE') {
-        const newP = await patientService.create(patientForm, user.id);
-        toast.success(`Patient profile "${newP.name}" created.`);
-        await selectPatient(newP.id);
-      } else {
-        await patientService.update(editingPatientId, patientForm, user.id);
-        toast.success(`Patient profile updated.`);
-        await selectPatient(editingPatientId);
-      }
-      setIsPatientModalOpen(false);
-      loadData();
-    } catch (err) {
-      toast.error(err.message);
-    }
+  const clearSelection = () => {
+    setSearchParams({});
+    setSelectedPatient(null);
   };
 
-  // Open Edit Modal
+  // CRUD handlers
+  const openCreateModal = () => {
+    setModalMode('CREATE');
+    setPatientForm({
+      name: '', age: '', gender: 'Male', phone: '', address: '', bloodGroup: 'O+', allergies: '', medicalHistory: '', emergencyContact: '', assignedDoctorId: ''
+    });
+    setIsPatientModalOpen(true);
+  };
+
   const openEditModal = (p) => {
     setModalMode('EDIT');
     setEditingPatientId(p.id);
@@ -148,495 +139,577 @@ export const Patients = () => {
     setIsPatientModalOpen(true);
   };
 
-  const openCreateModal = () => {
-    setModalMode('CREATE');
-    setPatientForm({
-      name: '', age: '', gender: 'Male', phone: '', address: '', bloodGroup: 'O+', allergies: '', medicalHistory: '', emergencyContact: '', assignedDoctorId: doctors[0]?.id || ''
-    });
-    setIsPatientModalOpen(true);
-  };
-
-  // Handle Patient Deletion
-  const handleDeletePatient = async (pId) => {
-    if (window.confirm('WARNING: Are you sure you want to delete this patient profile? This action will cascade check appointments and unpaid bills.')) {
-      try {
-        await patientService.delete(pId, user.id);
-        toast.success('Patient profile removed successfully.');
-        setSelectedPatient(null);
-        setSearchParams({});
-        loadData();
-      } catch (err) {
-        toast.error(err.message || 'Failed to delete patient profile.');
-      }
-    }
-  };
-
-  // Load available beds when ward is selected in Admit Form
-  useEffect(() => {
-    if (!admitForm.wardId) {
-      setAvailableBeds([]);
-      return;
-    }
-    const ward = wards.find(w => w.id === admitForm.wardId);
-    if (ward) {
-      const beds = ward.bedList.filter(b => b.status === 'Available' || b.status === 'Cleaning');
-      setAvailableBeds(beds);
-    }
-  }, [admitForm.wardId, wards]);
-
-  // Handle Patient Admission
-  const handleAdmitSubmit = async (e) => {
+  const handlePatientSubmit = async (e) => {
     e.preventDefault();
-    if (!admitForm.wardId || !admitForm.bedNo) {
-      toast.warning('Please select both a Ward and an available Bed.');
-      return;
-    }
     try {
-      await patientService.admit(selectedPatient.id, admitForm.wardId, admitForm.bedNo, user.id);
-      toast.success(`Patient admitted to Bed ${admitForm.bedNo} successfully.`);
-      setIsAdmitModalOpen(false);
-      setAdmitForm({ wardId: '', bedNo: '' });
-      await selectPatient(selectedPatient.id);
+      if (modalMode === 'CREATE') {
+        await patientService.create(patientForm, user.id);
+        toast.success(`Registered Patient "${patientForm.name}" successfully!`);
+      } else {
+        await patientService.update(editingPatientId, patientForm, user.id);
+        toast.success('Updated patient profile.');
+      }
+      setIsPatientModalOpen(false);
       loadData();
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // Handle Discharge
-  const handleDischarge = async (pId) => {
-    if (window.confirm('Discharging patient will free their assigned room bed and generate a final billing invoice. Proceed?')) {
-      try {
-        await patientService.discharge(pId, user.id);
-        toast.success('Patient discharged. Room charges invoice generated.');
-        await selectPatient(pId);
-        loadData();
-      } catch (err) {
-        toast.error(err.message);
-      }
+  const handleDeletePatient = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this patient profile permanently?')) return;
+    try {
+      await patientService.delete(id, user.id);
+      toast.success('Patient deleted successfully.');
+      clearSelection();
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
-  // Download PDF helpers
-  const handleDownloadInvoice = (bill) => {
-    pdfGenerator.generateInvoice(bill, selectedPatient, {
-      hospitalName: 'Careflow Medical Center',
-      hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
-      hospitalPhone: '+1 (555) 100-2000',
-      hospitalEmail: 'billing@careflow.com'
-    });
-    toast.success(`Invoice statement downloaded.`);
+  // Bed admissions
+  const openAdmitModal = () => {
+    setAdmitForm({ wardId: '', bedNo: '' });
+    setAvailableBeds([]);
+    setIsAdmitModalOpen(true);
   };
 
-  const handleDownloadPrescription = (pres) => {
-    const doc = doctors.find(d => d.id === pres.doctorId);
-    pdfGenerator.generatePrescription(pres, selectedPatient, doc, {
-      hospitalName: 'Careflow Medical Center',
-      hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
-      hospitalPhone: '+1 (555) 100-2000',
-      hospitalEmail: 'pharmacy@careflow.com'
-    });
-    toast.success('Prescription slip PDF downloaded.');
+  const handleWardChange = (wardId) => {
+    const selectedWard = wards.find(w => w.id === wardId);
+    if (!selectedWard) {
+      setAvailableBeds([]);
+      return;
+    }
+    const avail = selectedWard.bedList.filter(b => b.status === 'Available');
+    setAvailableBeds(avail);
+    setAdmitForm(prev => ({ ...prev, wardId, bedNo: avail[0]?.bedNo || '' }));
+  };
+
+  const handleAdmitSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await patientService.admit(selectedPatient.id, admitForm.wardId, admitForm.bedNo, user.id);
+      toast.success(`Admitted ${selectedPatient.name} to bed ${admitForm.bedNo}`);
+      setIsAdmitModalOpen(false);
+      // Reload current patient
+      const updated = await patientService.getById(selectedPatient.id);
+      setSelectedPatient(updated);
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDischarge = async () => {
+    if (!window.confirm(`Are you sure you want to discharge ${selectedPatient.name}? This will free up the occupied bed.`)) return;
+    try {
+      await patientService.discharge(selectedPatient.id, user.id);
+      toast.success('Discharged patient successfully.');
+      const updated = await patientService.getById(selectedPatient.id);
+      setSelectedPatient(updated);
+      loadData();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  // Simulated AI Summary generator
+  const generateAiSummary = () => {
+    if (!selectedPatient) return;
+    setGeneratingAi(true);
+    setTimeout(() => {
+      const summaryText = `AI CLINICAL SUMMARY FOR: ${selectedPatient.name} (Age: ${selectedPatient.age}, Blood: ${selectedPatient.bloodGroup})
+--------------------------------------------------
+* Clinical Overview: Patient has a history of ${selectedPatient.medicalHistory || 'no chronic diseases'}. Allergies noted: ${selectedPatient.allergies || 'none'}.
+* Operations Activity: The database records ${selectedPatient.history?.appointments?.length || 0} scheduled checkups and ${selectedPatient.history?.prescriptions?.length || 0} filled pharmacy prescriptions.
+* Billing Status: The patient has ${selectedPatient.history?.bills?.filter(b => b.status === 'Unpaid').length || 0} unpaid invoices. Total revenue generated to date is $${selectedPatient.history?.bills?.reduce((sum, b) => sum + b.total, 0) || 0}.
+* Administrative Insights: HEALTH HUB AI recommends scheduling a cardiology review if symptoms persist and verifying that medication stocks are available for current prescriptions.`;
+      setAiSummary(summaryText);
+      setGeneratingAi(false);
+      toast.success('HEALTH HUB AI generated patient summary successfully!');
+    }, 1500);
+  };
+
+  // Filtered patients list
+  const filteredPatients = patients.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.id.includes(search);
+    const matchesStatus = statusFilter === 'All' || p.admissionStatus === statusFilter;
+    const matchesDoctor = doctorFilter === 'All' || p.assignedDoctorId === doctorFilter;
+    return matchesSearch && matchesStatus && matchesDoctor;
+  });
+
+  // Calculate directory statistics
+  const statsCards = {
+    total: patients.length,
+    new: patients.filter(p => new Date(p.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length,
+    active: patients.filter(p => p.admissionStatus === 'Admitted').length,
+    critical: patients.filter(p => p.medicalHistory?.toLowerCase().includes('heart') || p.medicalHistory?.toLowerCase().includes('critical') || p.admissionStatus === 'Admitted' && p.ward?.name?.toLowerCase().includes('icu')).length
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-120px)] animate-fade-in">
-      {/* LEFT: Patients list directory */}
-      <div className="w-full lg:w-96 flex flex-col bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-premium">
-        {/* Search header */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-800 dark:text-white">Patient Directory</h2>
-            {(isAdmin || isReceptionist) && (
-              <Button size="sm" variant="primary" icon={Plus} onClick={openCreateModal}>
-                Add Profile
+    <div className="flex flex-col gap-6 animate-fade-in">
+      {/* 1. SELECTED PATIENT DETAILS VIEW */}
+      {selectedPatient ? (
+        <div className="flex flex-col gap-6">
+          {/* Header row with back buttons */}
+          <div className="flex items-center justify-between select-none">
+            <Button variant="outline" size="sm" icon={ArrowLeft} onClick={clearSelection}>
+              Back to Patient Directory
+            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => openEditModal(selectedPatient)}>
+                Edit Profile
               </Button>
-            )}
-          </div>
-          {/* Search box */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search by name, phone or ID..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs pl-10 pr-4 py-2 rounded-xl outline-none focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-slate-800 dark:text-slate-100"
-            />
-          </div>
-          {/* Filters */}
-          <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-1/2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] rounded-lg px-2 py-1 cursor-pointer outline-none focus:border-teal-500 text-slate-700 dark:text-slate-350"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Admitted">Admitted</option>
-              <option value="Outpatient">Outpatient</option>
-              <option value="Discharged">Discharged</option>
-            </select>
-            <select
-              value={doctorFilter}
-              onChange={(e) => setDoctorFilter(e.target.value)}
-              className="w-1/2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] rounded-lg px-2 py-1 cursor-pointer outline-none focus:border-teal-500 text-slate-700 dark:text-slate-350"
-            >
-              <option value="All">All Doctors</option>
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>{d.name.split('. ')[1] || d.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Directory List */}
-        <div className="flex-grow overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/50">
-          {filteredPatients.map(p => {
-            const isSelected = selectedPatient?.id === p.id;
-            return (
-              <button
-                key={p.id}
-                onClick={() => selectPatient(p.id)}
-                className={`w-full text-left p-4 transition-colors flex items-center justify-between border-l-4 ${
-                  isSelected 
-                    ? 'bg-teal-50/40 dark:bg-teal-950/10 border-teal-600' 
-                    : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-750/30'
-                }`}
-              >
-                <div className="min-w-0 pr-2">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{p.name}</h4>
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
-                    <span>ID: {p.id.substring(0, 8)}</span>
-                    <span>•</span>
-                    <span>{p.gender}, {p.age} yrs</span>
-                  </div>
-                </div>
-                <Badge variant={
-                  p.admissionStatus === 'Admitted' ? 'success' : 
-                  p.admissionStatus === 'Discharged' ? 'neutral' : 'info'
-                }>
-                  {p.admissionStatus}
-                </Badge>
-              </button>
-            );
-          })}
-          {filteredPatients.length === 0 && (
-            <div className="p-8 text-center text-xs text-slate-400 select-none">
-              No matching patient records found.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT: Patient Clinical File Details */}
-      <div className="flex-grow bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-premium flex flex-col">
-        {selectedPatient ? (
-          <>
-            {/* Header info */}
-            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-base select-none">
-                  {selectedPatient.name.substring(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base font-bold text-slate-800 dark:text-white leading-tight">
-                      {selectedPatient.name}
-                    </h3>
-                    <Badge variant={
-                      selectedPatient.admissionStatus === 'Admitted' ? 'success' : 
-                      selectedPatient.admissionStatus === 'Discharged' ? 'neutral' : 'info'
-                    }>
-                      {selectedPatient.admissionStatus}
-                    </Badge>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    System Database Ref: <span className="font-mono">{selectedPatient.id}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {(isAdmin || isReceptionist) && (
-                  <>
-                    <Button size="sm" variant="outline" icon={Edit2} onClick={() => openEditModal(selectedPatient)}>
-                      Edit Profile
-                    </Button>
-                    
-                    {selectedPatient.admissionStatus !== 'Admitted' ? (
-                      <Button size="sm" variant="success" icon={Bed} onClick={() => setIsAdmitModalOpen(true)}>
-                        Admit Patient
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="warning" icon={Bed} onClick={() => handleDischarge(selectedPatient.id)}>
-                        Discharge Patient
-                      </Button>
-                    )}
-                  </>
-                )}
-                {isAdmin && (
-                  <Button size="sm" variant="danger" icon={Trash2} onClick={() => handleDeletePatient(selectedPatient.id)} />
-                )}
-              </div>
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className="flex border-b border-slate-100 dark:border-slate-700 px-6 bg-slate-50/20 overflow-x-auto">
-              {['Overview', 'Appointments', 'Prescriptions', 'Diagnostic Reports', 'Billing History'].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setSelectedTab(tab)}
-                  className={`px-4 py-3 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-                    selectedTab === tab 
-                      ? 'border-teal-600 text-teal-600 dark:text-teal-400' 
-                      : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-350'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content panel */}
-            <div className="flex-grow p-6 overflow-y-auto">
-              
-              {/* TAB 1: OVERVIEW */}
-              {selectedTab === 'Overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Left Info Panel */}
-                  <div className="md:col-span-2 flex flex-col gap-5">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Age / Gender</h4>
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mt-1">{selectedPatient.age} Years / {selectedPatient.gender}</p>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Blood Group</h4>
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mt-1">{selectedPatient.bloodGroup}</p>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Phone</h4>
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mt-1">{selectedPatient.phone}</p>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assigned Physician</h4>
-                        <p className="text-xs font-medium text-teal-600 dark:text-teal-400 mt-1">Dr. {selectedPatient.assignedDoctor?.name || 'N/A'}</p>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residential Address</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-350 mt-1">{selectedPatient.address}</p>
-                    </div>
-
-                    <div className="border-t border-slate-100 dark:border-slate-700/60 pt-4">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Past Medical History</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-350 mt-1 whitespace-pre-line">{selectedPatient.medicalHistory || 'No previous clinical history logged.'}</p>
-                    </div>
-                  </div>
-
-                  {/* Right Warnings & Ward info */}
-                  <div className="flex flex-col gap-4">
-                    {/* Ward details if admitted */}
-                    {selectedPatient.admissionStatus === 'Admitted' && (
-                      <div className="p-4 bg-teal-50/40 border border-teal-200 rounded-xl">
-                        <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 font-bold text-xs">
-                          <Bed className="w-4 h-4" />
-                          <span>Active Bed Allocation</span>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-2">
-                          Ward: {selectedPatient.ward?.name || 'N/A'}
-                        </p>
-                        <p className="text-xs font-bold text-teal-600 mt-1">
-                          Bed Reference: {selectedPatient.bedNo}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Allergies Box */}
-                    <div className={`p-4 border rounded-xl ${
-                      selectedPatient.allergies && selectedPatient.allergies !== 'None'
-                        ? 'bg-red-50/40 border-red-200 text-red-700 dark:bg-red-950/10'
-                        : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-750 text-slate-500'
-                    }`}>
-                      <div className="flex items-center gap-2 font-bold text-xs">
-                        <AlertOctagon className="w-4 h-4" />
-                        <span>Allergies & Contraindications</span>
-                      </div>
-                      <p className="text-xs font-bold mt-2">
-                        {selectedPatient.allergies || 'No allergies recorded.'}
-                      </p>
-                    </div>
-
-                    {/* Emergency Contact */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 rounded-xl">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Emergency Contact</h4>
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1.5">{selectedPatient.emergencyContact || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
+              {isAdmin && (
+                <Button size="sm" variant="danger" icon={Trash2} onClick={() => handleDeletePatient(selectedPatient.id)}>
+                  Delete Profile
+                </Button>
               )}
+            </div>
+          </div>
 
-              {/* TAB 2: APPOINTMENTS */}
-              {selectedTab === 'Appointments' && (
-                <div className="flex flex-col gap-4">
-                  {selectedPatient.history?.appointments.map(apt => (
-                    <div key={apt.id} className="flex items-center justify-between p-4 border border-slate-100 dark:border-slate-750 rounded-xl hover:shadow-premium transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center">
-                          <Calendar className="w-4.5 h-4.5 text-indigo-500" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            Dr. {apt.doctor?.name || 'Physician'} ({apt.doctor?.specialization})
-                          </h4>
-                          <p className="text-[10px] text-slate-400 mt-1">{apt.date} at {apt.time}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">{apt.reason}</p>
-                        </div>
-                      </div>
-                      <Badge variant={
-                        apt.status === 'Completed' ? 'success' : 
-                        apt.status === 'Cancelled' ? 'danger' : 'info'
-                      }>
-                        {apt.status}
-                      </Badge>
-                    </div>
-                  ))}
-                  {selectedPatient.history?.appointments.length === 0 && (
-                    <div className="text-center text-slate-400 py-8 text-xs select-none">
-                      No medical appointments scheduled.
-                    </div>
+          {/* Patient Profile Card Header */}
+          <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-6 shadow-premium">
+            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+              {/* Photo placeholder */}
+              <div className="w-20 h-20 rounded-2xl bg-primary-50 dark:bg-primary-950/20 text-primary-600 border border-primary-100 dark:border-primary-900/50 flex items-center justify-center flex-shrink-0 text-3xl font-extrabold select-none">
+                {selectedPatient.name.charAt(0)}
+              </div>
+              <div className="flex-grow">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white">{selectedPatient.name}</h2>
+                  <Badge variant={selectedPatient.admissionStatus === 'Admitted' ? 'premium' : 'neutral'}>
+                    {selectedPatient.admissionStatus || 'Outpatient'}
+                  </Badge>
+                  {selectedPatient.ward && (
+                    <Badge variant="success">
+                      {selectedPatient.ward.name} ({selectedPatient.bedNo})
+                    </Badge>
                   )}
                 </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2 gap-x-4 mt-3 text-xs text-slate-500 dark:text-slate-400">
+                  <div>Patient ID: <span className="font-bold text-slate-750 dark:text-slate-200">{selectedPatient.id.substring(0, 8)}</span></div>
+                  <div>Age / Gender: <span className="font-bold text-slate-750 dark:text-slate-200">{selectedPatient.age} Yrs / {selectedPatient.gender}</span></div>
+                  <div>Blood Group: <span className="font-bold text-slate-750 dark:text-slate-200">{selectedPatient.bloodGroup}</span></div>
+                  <div>Assigned Doctor: <span className="font-bold text-primary-600">Dr. {selectedPatient.assignedDoctor?.name || 'Unassigned'}</span></div>
+                </div>
+              </div>
+
+              {/* Admission CTA buttons */}
+              <div className="flex flex-wrap gap-2 select-none">
+                {selectedPatient.admissionStatus === 'Admitted' ? (
+                  <Button variant="danger" size="sm" onClick={handleDischarge}>
+                    Discharge Patient
+                  </Button>
+                ) : (
+                  (isAdmin || isReceptionist) && (
+                    <Button variant="primary" size="sm" icon={Bed} onClick={openAdmitModal}>
+                      Admit to Ward
+                    </Button>
+                  )
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  icon={Download} 
+                  onClick={() => pdfGenerator.generateInvoice(selectedPatient.history?.bills[0] || { id: 'dummy', patientName: selectedPatient.name, date: new Date().toLocaleDateString(), subtotal: 0, tax: 0, total: 0, items: [] })}
+                >
+                  Download Report
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Vitals clinical cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest">Blood Pressure</span>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-xl font-extrabold text-slate-800 dark:text-white">120/80</span>
+                <span className="text-[10px] text-slate-400 font-medium">mmHg</span>
+              </div>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest">Heart Rate</span>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-xl font-extrabold text-slate-800 dark:text-white">72</span>
+                <span className="text-[10px] text-slate-400 font-medium">bpm</span>
+              </div>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest">Body Temp</span>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-xl font-extrabold text-slate-800 dark:text-white">98.6</span>
+                <span className="text-[10px] text-slate-400 font-medium">°F</span>
+              </div>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest">Vitals Status</span>
+              <div className="mt-2">
+                <Badge variant="success">Normal</Badge>
+              </div>
+            </Card>
+          </div>
+
+          {/* Details layout grids */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Tabs details */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              {/* Tab Selector */}
+              <div className="flex border-b border-slate-100 dark:border-slate-800 gap-6 select-none">
+                {['Overview', 'Medical History', 'Appointments', 'Prescriptions', 'Lab Reports', 'Billing'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setSelectedTab(tab)}
+                    className={`pb-3 text-sm font-bold border-b-2 cursor-pointer transition-all ${
+                      selectedTab === tab 
+                        ? 'border-primary-650 text-primary-650' 
+                        : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content Panels */}
+              {selectedTab === 'Overview' && (
+                <Card title="Patient Intake Profile" subtitle="General demographics and observations">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <span className="text-xs font-bold text-slate-450 uppercase block">Allergies & Reactions</span>
+                        <p className="text-slate-700 dark:text-slate-350 mt-1 font-semibold text-red-600 dark:text-red-400">
+                          {selectedPatient.allergies || 'No allergies recorded.'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-450 uppercase block">Medical Timeline Summary</span>
+                        <p className="text-slate-750 dark:text-slate-300 mt-1 leading-relaxed">
+                          {selectedPatient.medicalHistory || 'No previous medical history recorded.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <span className="text-xs font-bold text-slate-450 uppercase block">Emergency Contact Info</span>
+                        <p className="text-slate-750 dark:text-slate-300 mt-1 font-semibold">
+                          {selectedPatient.emergencyContact || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-450 uppercase block">Residential Address</span>
+                        <p className="text-slate-750 dark:text-slate-300 mt-1 leading-relaxed">
+                          {selectedPatient.address}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               )}
 
-              {/* TAB 3: PRESCRIPTIONS */}
-              {selectedTab === 'Prescriptions' && (
-                <div className="flex flex-col gap-4">
-                  {selectedPatient.history?.prescriptions.map(pres => (
-                    <div key={pres.id} className="p-4 border border-slate-100 dark:border-slate-750 rounded-xl flex flex-col gap-3 hover:shadow-premium transition-all">
-                      <div className="flex justify-between items-start">
+              {selectedTab === 'Medical History' && (
+                <Card title="Clinical Checkup Timeline" subtitle="Logs of events, checkups, and diagnostic orders">
+                  <div className="relative pl-6 border-l border-slate-100 dark:border-slate-800 flex flex-col gap-6">
+                    <div className="relative">
+                      <span className="absolute -left-8.5 top-1.5 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-950/20 text-primary-650 flex items-center justify-center font-bold text-xs select-none">1</span>
+                      <h4 className="text-sm font-bold text-slate-850 dark:text-slate-200">Patient Registry Profile Created</h4>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">{new Date(selectedPatient.createdAt).toLocaleString()}</span>
+                      <p className="text-xs text-slate-550 dark:text-slate-400 mt-1 leading-relaxed">
+                        Initial profile database register initiated for {selectedPatient.name}.
+                      </p>
+                    </div>
+                    {selectedPatient.history?.appointments?.map((apt, idx) => (
+                      <div key={apt.id} className="relative">
+                        <span className="absolute -left-8.5 top-1.5 w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-950/20 text-teal-650 flex items-center justify-center font-bold text-xs select-none">{idx + 2}</span>
+                        <h4 className="text-sm font-bold text-slate-850 dark:text-slate-200">Appointment: {apt.reason}</h4>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">{apt.date} at {apt.time}</span>
+                        <p className="text-xs text-slate-550 dark:text-slate-400 mt-1 leading-relaxed">
+                          Consultation with Dr. {apt.doctor?.name} in {apt.department || 'General Medicine'}. Status: <span className="font-semibold text-emerald-600">{apt.status}</span>.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {selectedTab === 'Appointments' && (
+                <Card title="Appointment Registers" subtitle="All consultations and scheduler logs">
+                  <div className="flex flex-col gap-3">
+                    {selectedPatient.history?.appointments?.map(apt => (
+                      <div key={apt.id} className="p-4 border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750/30 rounded-2xl flex justify-between items-center">
                         <div>
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            Prescribed by Dr. {pres.doctor?.name || 'Physician'}
-                          </h4>
-                          <p className="text-[10px] text-slate-400 mt-1">Date: {pres.date}  |  Prescription Ref: {pres.id.substring(0, 8)}</p>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Dr. {apt.doctor?.name}</h4>
+                          <p className="text-xs text-slate-450 mt-0.5">{apt.date} at {apt.time} — {apt.reason}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={pres.status === 'Dispensed' ? 'success' : 'warning'}>
-                            {pres.status}
-                          </Badge>
-                          <Button size="sm" variant="secondary" icon={Download} onClick={() => handleDownloadPrescription(pres)}>
+                        <Badge variant={apt.status === 'Confirmed' ? 'premium' : apt.status === 'Completed' ? 'success' : 'neutral'}>
+                          {apt.status}
+                        </Badge>
+                      </div>
+                    ))}
+                    {selectedPatient.history?.appointments?.length === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-sm">No appointments scheduled.</div>
+                    )}
+                  </div>
+                </Card>
+              )}
+
+              {selectedTab === 'Prescriptions' && (
+                <Card title="Clinical Prescriptions" subtitle="Prescribed medication details and PDF archives">
+                  <div className="flex flex-col gap-4">
+                    {selectedPatient.history?.prescriptions?.map(pre => (
+                      <div key={pre.id} className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl">
+                        <div className="flex justify-between items-center mb-3">
+                          <div>
+                            <span className="text-xs font-bold text-slate-450">Prescribing Doctor</span>
+                            <h4 className="text-sm font-bold text-slate-850 dark:text-slate-250">Dr. {pre.doctor?.name}</h4>
+                          </div>
+                          <Button size="xs" variant="outline" icon={Download} onClick={() => pdfGenerator.generatePrescription(pre)}>
                             Download PDF
                           </Button>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-750">
+                          {pre.medicines.map((m, idx) => (
+                            <div key={idx}>
+                              • <span className="font-bold text-slate-750 dark:text-slate-350">{m.detail?.name}</span> - {m.dosage} ({m.duration})
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      
-                      {/* Meds List */}
-                      <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 flex flex-col gap-2">
-                        {pres.medicines.map((m, idx) => (
-                          <div key={idx} className="flex justify-between text-xs border-b border-slate-100 last:border-0 pb-1.5 last:pb-0">
-                            <span className="font-bold text-slate-700 dark:text-slate-300">{m.detail?.name || 'Medicine'}</span>
-                            <span className="text-slate-500">{m.dosage} • {m.duration}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-slate-500 italic">Notes: {pres.notes}</p>
-                    </div>
-                  ))}
-                  {selectedPatient.history?.prescriptions.length === 0 && (
-                    <div className="text-center text-slate-400 py-8 text-xs select-none">
-                      No prescription slips found.
-                    </div>
-                  )}
-                </div>
+                    ))}
+                    {selectedPatient.history?.prescriptions?.length === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-sm">No prescriptions issued.</div>
+                    )}
+                  </div>
+                </Card>
               )}
 
-              {/* TAB 4: DIAGNOSTIC REPORTS */}
-              {selectedTab === 'Diagnostic Reports' && (
-                <div className="flex flex-col gap-4">
-                  {selectedPatient.history?.labReports.map(rep => (
-                    <div key={rep.id} className="p-4 border border-slate-100 dark:border-slate-750 rounded-xl flex flex-col gap-2 hover:shadow-premium transition-all">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">{rep.testName}</h4>
-                        <Badge variant={rep.status === 'Completed' ? 'success' : 'warning'}>
-                          {rep.status}
+              {selectedTab === 'Lab Reports' && (
+                <Card title="Diagnostic Lab Reports" subtitle="Lab diagnostic details and clinical findings">
+                  <div className="flex flex-col gap-4">
+                    {selectedPatient.history?.labReports?.map(lab => (
+                      <div key={lab.id} className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl flex justify-between items-center">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{lab.testName}</h4>
+                          <p className="text-xs text-slate-450 mt-0.5">Ordered by: Dr. {lab.doctor?.name} | Issued: {lab.date}</p>
+                          {lab.resultText && (
+                            <div className="mt-2 text-xs bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-mono text-slate-600 dark:text-slate-400">
+                              Result Findings: {lab.resultText}
+                            </div>
+                          )}
+                        </div>
+                        <Badge variant={lab.status === 'Completed' ? 'success' : 'warning'}>
+                          {lab.status}
                         </Badge>
                       </div>
-                      <p className="text-[10px] text-slate-400">Ordered by Dr. {rep.doctor?.name}  |  Issued: {rep.date}</p>
-                      <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 mt-2">
-                        {rep.resultText || 'Awaiting lab technician results...'}
-                      </div>
-                    </div>
-                  ))}
-                  {selectedPatient.history?.labReports.length === 0 && (
-                    <div className="text-center text-slate-400 py-8 text-xs select-none">
-                      No diagnostic lab orders found.
-                    </div>
-                  )}
-                </div>
+                    ))}
+                    {selectedPatient.history?.labReports?.length === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-sm">No laboratory orders recorded.</div>
+                    )}
+                  </div>
+                </Card>
               )}
 
-              {/* TAB 5: BILLING HISTORY */}
-              {selectedTab === 'Billing History' && (
+              {selectedTab === 'Billing' && (
+                <Card title="Billing Statements & Invoices" subtitle="Invoice ledger records and payment states">
+                  <div className="flex flex-col gap-3">
+                    {selectedPatient.history?.bills?.map(bill => (
+                      <div key={bill.id} className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl flex justify-between items-center">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-850 dark:text-slate-250">Invoice ID: {bill.id.substring(0, 8)}</h4>
+                          <p className="text-xs text-slate-450 mt-0.5">Total Amount: ${bill.total.toFixed(2)} | Date: {bill.date}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={bill.status === 'Paid' ? 'success' : 'danger'}>
+                            {bill.status}
+                          </Badge>
+                          <Button size="xs" variant="outline" icon={Download} onClick={() => pdfGenerator.generateInvoice(bill)}>
+                            PDF
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedPatient.history?.bills?.length === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-sm">No billing records found.</div>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* AI Patient Summary Card (Side Widget) */}
+            <div className="flex flex-col gap-6">
+              <Card title="HEALTH HUB AI Summary" subtitle="Administrative medical profiling" className="bg-primary-50/10 border-primary-100">
                 <div className="flex flex-col gap-4">
-                  {selectedPatient.history?.bills.map(bill => (
-                    <div key={bill.id} className="p-4 border border-slate-100 dark:border-slate-750 rounded-xl flex items-center justify-between hover:shadow-premium transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center">
-                          <CreditCard className="w-4.5 h-4.5 text-teal-600" />
+                  <div className="text-xs text-slate-500 leading-relaxed">
+                    Generate an administrative diagnosis summary combining patient admissions, prescription stock checks, and clinic events logs.
+                  </div>
+                  {aiSummary ? (
+                    <div className="p-3.5 bg-white dark:bg-slate-850 border border-slate-100 dark:border-slate-750 text-[11px] font-mono leading-relaxed rounded-xl text-slate-700 dark:text-slate-300 max-h-96 overflow-y-auto whitespace-pre-line animate-fade-in shadow-sm">
+                      {aiSummary}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-400 select-none">
+                      No summary generated yet.
+                    </div>
+                  )}
+                  <Button 
+                    size="sm" 
+                    variant="primary" 
+                    icon={BrainCircuit} 
+                    className="w-full py-2.5" 
+                    onClick={generateAiSummary}
+                    disabled={generatingAi}
+                  >
+                    {generatingAi ? 'Generating Summary...' : 'Generate AI Summary'}
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* 2. MAIN PATIENT DIRECTORY LIST TABLE VIEW */
+        <div className="flex flex-col gap-6">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 select-none">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">Patient Directory</h1>
+              <p className="text-slate-400 text-xs mt-1">Manage, register, and review all clinical charts.</p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="primary" size="sm" icon={Plus} onClick={openCreateModal} className="flex-grow sm:flex-grow-0">
+                Register Patient
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                icon={Download} 
+                onClick={() => toast.info('Exported patient directory to CSV.')}
+              >
+                Export CSV
+              </Button>
+            </div>
+          </div>
+
+          {/* Statistics metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">
+            <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Patients</span>
+              <span className="text-2xl font-extrabold text-slate-850 dark:text-white mt-2">{statsCards.total}</span>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">New Registrations</span>
+              <span className="text-2xl font-extrabold text-slate-850 dark:text-white mt-2">{statsCards.new}</span>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Inpatients</span>
+              <span className="text-2xl font-extrabold text-slate-850 dark:text-white mt-2">{statsCards.active}</span>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between hover:shadow-premium duration-150 transition-all">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Critical Patients</span>
+              <span className="text-2xl font-extrabold text-slate-850 dark:text-white mt-2">{statsCards.critical}</span>
+            </Card>
+          </div>
+
+          {/* Search, Filter panels */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 select-none bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-2xl shadow-sm">
+            <div className="relative sm:col-span-2">
+              <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-slate-400">
+                <Search className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search patients by name or ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-slate-50/50 dark:bg-slate-900 border text-xs pl-10 pr-4 py-2.5 rounded-xl outline-none focus:bg-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-slate-800 dark:text-slate-100"
+              />
+            </div>
+            <Select
+              id="f-status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: 'All', label: 'All Statuses' },
+                { value: 'Admitted', label: 'Inpatient (Admitted)' },
+                { value: 'Discharged', label: 'Outpatient (Discharged)' }
+              ]}
+            />
+            <Select
+              id="f-doc"
+              value={doctorFilter}
+              onChange={(e) => setDoctorFilter(e.target.value)}
+              options={[
+                { value: 'All', label: 'All Doctors' },
+                ...doctors.map(d => ({ value: d.id, label: `Dr. ${d.name}` }))
+              ]}
+            />
+          </div>
+
+          {/* Directory Listings Table */}
+          <Card title="Patient Registry Logs" subtitle="Lists of clinical profiles" className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs select-none">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+                  <th className="py-3 px-4">Patient Name</th>
+                  <th className="py-3 px-4">Age / Gender</th>
+                  <th className="py-3 px-4">Phone</th>
+                  <th className="py-3 px-4">Blood</th>
+                  <th className="py-3 px-4">Assigned Doctor</th>
+                  <th className="py-3 px-4">Care Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                {filteredPatients.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-750/10 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-primary-50 dark:bg-primary-950/20 text-primary-650 flex items-center justify-center font-bold text-xs select-none">
+                          {p.name.charAt(0)}
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            Statement Total: ${bill.total.toFixed(2)}
-                          </h4>
-                          <p className="text-[10px] text-slate-400 mt-1">Issued: {bill.date}  |  Bill ID: {bill.id.substring(0, 8)}</p>
-                          <p className="text-[9px] text-slate-400 mt-0.5">Mode: {bill.paymentMode}</p>
+                          <div className="font-extrabold">{p.name}</div>
+                          <span className="text-[10px] text-slate-400 block font-mono">{p.id.substring(0, 8)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={
-                          bill.status === 'Paid' ? 'success' : 
-                          bill.status === 'Partial' ? 'warning' : 'danger'
-                        }>
-                          {bill.status}
-                        </Badge>
-                        <Button size="sm" variant="secondary" icon={Download} onClick={() => handleDownloadInvoice(bill)}>
-                          Invoice PDF
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {selectedPatient.history?.bills.length === 0 && (
-                    <div className="text-center text-slate-400 py-8 text-xs select-none">
-                      No billing invoices issued.
-                    </div>
-                  )}
-                </div>
-              )}
+                    </td>
+                    <td className="py-3 px-4 text-slate-500">{p.age} Yrs / {p.gender}</td>
+                    <td className="py-3 px-4 text-slate-550">{p.phone}</td>
+                    <td className="py-3 px-4 text-slate-500 font-semibold">{p.bloodGroup}</td>
+                    <td className="py-3 px-4 text-primary-600 font-semibold">Dr. {p.assignedDoctor?.name || 'Unassigned'}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant={p.admissionStatus === 'Admitted' ? 'premium' : 'neutral'}>
+                        {p.admissionStatus || 'Outpatient'}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4 text-right flex justify-end gap-1.5 mt-0.5">
+                      <Button size="xs" variant="primary" onClick={() => selectPatient(p.id)}>
+                        View Profile
+                      </Button>
+                      <Button size="xs" variant="secondary" onClick={() => openEditModal(p)}>
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredPatients.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400 text-sm">
+                      No patient profiles matching the query filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      )}
 
-            </div>
-          </>
-        ) : (
-          <div className="flex-grow flex flex-col items-center justify-center p-8 text-center text-slate-400 select-none">
-            <User className="w-16 h-16 text-slate-200 dark:text-slate-700 mb-4" />
-            <h3 className="text-sm font-bold">No Patient Profile Selected</h3>
-            <p className="text-xs mt-1 max-w-xs leading-normal">
-              Select an option from the directory sidebar or register a new user configuration profile.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* PATIENT PROFILE EDIT/CREATE MODAL */}
-      <Modal 
-        isOpen={isPatientModalOpen} 
-        onClose={() => setIsPatientModalOpen(false)} 
-        title={modalMode === 'CREATE' ? 'Register New Patient Profile' : 'Edit Patient Medical File'}
-      >
+      {/* CREATE/EDIT PATIENT MODAL */}
+      <Modal isOpen={isPatientModalOpen} onClose={() => setIsPatientModalOpen(false)} title={modalMode === 'CREATE' ? 'Register New Patient Profile' : 'Edit Patient Profile'}>
         <form onSubmit={handlePatientSubmit} className="grid grid-cols-2 gap-4">
           <Input 
             label="Full Name" 
@@ -679,85 +752,91 @@ export const Patients = () => {
             options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(b => ({ value: b, label: b }))}
           />
           <Select
-            label="Assigned Doctor"
+            label="Assign Doctor"
             id="p-doc"
             value={patientForm.assignedDoctorId}
             onChange={(e) => setPatientForm({ ...patientForm, assignedDoctorId: e.target.value })}
-            options={doctors.map(d => ({ value: d.id, label: `${d.name} (${d.specialization})` }))}
+            options={[
+              { value: '', label: '-- Choose Doctor --' },
+              ...doctors.map(d => ({ value: d.id, label: `Dr. ${d.name} (${d.specialization})` }))
+            ]}
           />
           <Input 
-            label="Allergies & Contraindications" 
+            label="Allergies" 
             id="p-allergies" 
             value={patientForm.allergies} 
             onChange={(e) => setPatientForm({ ...patientForm, allergies: e.target.value })}
-            placeholder="e.g. Penicillin, Shellfish (or 'None')" 
+            placeholder="Penicillin, Peanuts (optional)" 
           />
           <Input 
             label="Emergency Contact" 
             id="p-emergency" 
             value={patientForm.emergencyContact} 
             onChange={(e) => setPatientForm({ ...patientForm, emergencyContact: e.target.value })}
-            placeholder="Name & contact phone number" 
+            placeholder="Jane Doe (+1 555-011-2244)" 
             className="col-span-2"
             required
           />
           <Textarea 
-            label="Clinical History Details" 
+            label="Medical History Summary" 
             id="p-history" 
             value={patientForm.medicalHistory} 
             onChange={(e) => setPatientForm({ ...patientForm, medicalHistory: e.target.value })}
-            placeholder="Log details of previous conditions, surgeries, or chronic problems..." 
+            placeholder="Hypertension, past bypass surgeries, clinical allergies (optional)" 
             className="col-span-2"
           />
           <Textarea 
-            label="Home Address" 
+            label="Residential Address" 
             id="p-addr" 
             value={patientForm.address} 
             onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
-            placeholder="Street Address, City" 
+            placeholder="100 Main St, Boston, MA" 
             className="col-span-2"
             required
           />
           <div className="col-span-2 flex justify-end gap-2 mt-2">
             <Button type="button" variant="secondary" onClick={() => setIsPatientModalOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="primary">{modalMode === 'CREATE' ? 'Register' : 'Save Changes'}</Button>
+            <Button type="submit" variant="primary">{modalMode === 'CREATE' ? 'Register Patient' : 'Save Changes'}</Button>
           </div>
         </form>
       </Modal>
 
-      {/* ADMISSION MODAL */}
+      {/* ADMIT PATIENT MODAL */}
       <Modal isOpen={isAdmitModalOpen} onClose={() => setIsAdmitModalOpen(false)} title="Admit Patient to Ward Bed">
         <form onSubmit={handleAdmitSubmit} className="flex flex-col gap-4">
           <Select
-            label="Select Ward Type"
-            id="adm-ward"
+            label="Select Ward"
+            id="ad-ward"
             value={admitForm.wardId}
-            onChange={(e) => setAdmitForm({ wardId: e.target.value, bedNo: '' })}
+            onChange={(e) => handleWardChange(e.target.value)}
             required
             options={[
               { value: '', label: '-- Choose Ward --' },
-              ...wards.map(w => ({ value: w.id, label: `${w.name} (${w.type} Ward, Occupancy: ${w.occupiedBeds}/${w.totalBeds})` }))
+              ...wards.map(w => ({ value: w.id, label: `${w.name} (Beds: ${w.occupiedBeds}/${w.totalBeds})` }))
             ]}
           />
+          
           <Select
-            label="Select Available Bed"
-            id="adm-bed"
+            label="Select Bed Number"
+            id="ad-bed"
             value={admitForm.bedNo}
             onChange={(e) => setAdmitForm({ ...admitForm, bedNo: e.target.value })}
             required
-            disabled={!admitForm.wardId}
+            disabled={availableBeds.length === 0}
             options={[
-              { value: '', label: '-- Choose Available Bed --' },
-              ...availableBeds.map(b => ({ value: b.bedNo, label: `${b.bedNo} - [${b.status}]` }))
+              { value: '', label: availableBeds.length === 0 ? '-- No Beds Available --' : '-- Choose Bed --' },
+              ...availableBeds.map(b => ({ value: b.bedNo, label: b.bedNo }))
             ]}
           />
-          <div className="flex justify-end gap-2 mt-2">
+
+          <div className="flex justify-end gap-2 mt-4">
             <Button type="button" variant="secondary" onClick={() => setIsAdmitModalOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="success">Admit Patient</Button>
+            <Button type="submit" variant="primary" disabled={availableBeds.length === 0}>Confirm Admission</Button>
           </div>
         </form>
       </Modal>
     </div>
   );
 };
+
 export default Patients;

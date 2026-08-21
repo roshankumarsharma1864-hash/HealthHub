@@ -112,10 +112,10 @@ export const Prescriptions = () => {
     const pat = patients.find(p => p.id === pres.patientId);
     const doc = doctors.find(d => d.id === pres.doctorId);
     pdfGenerator.generatePrescription(pres, pat, doc, {
-      hospitalName: 'Careflow Medical Center',
+      hospitalName: 'HEALTH HUB',
       hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
       hospitalPhone: '+1 (555) 100-2000',
-      hospitalEmail: 'pharmacy@careflow.com'
+      hospitalEmail: 'pharmacy@healthhub.com'
     });
     toast.success('Prescription slip PDF downloaded.');
   };

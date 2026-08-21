@@ -674,3 +674,138 @@ export const activityService = {
     }));
   }
 };
+
+// ==========================================
+// 10. DEPARTMENT SERVICE
+// ==========================================
+export const departmentService = {
+  async getAll() {
+    const depts = await db.getAll(KEYS.DEPARTMENTS);
+    const doctors = await db.getAll(KEYS.DOCTORS);
+    return depts.map(d => ({
+      ...d,
+      headDoctor: doctors.find(doc => doc.id === d.headDoctorId) || null
+    }));
+  },
+  async getById(id) {
+    const depts = await this.getAll();
+    return depts.find(d => d.id === id) || null;
+  },
+  async create(deptData, userId = 'system') {
+    return await db.create(KEYS.DEPARTMENTS, { ...deptData, userId });
+  },
+  async update(id, deptData, userId = 'system') {
+    return await db.update(KEYS.DEPARTMENTS, id, { ...deptData, userId });
+  },
+  async delete(id, userId = 'system') {
+    return await db.delete(KEYS.DEPARTMENTS, id, userId);
+  }
+};
+
+// ==========================================
+// 11. EMERGENCY SERVICE
+// ==========================================
+export const emergencyService = {
+  async getAll() {
+    const cases = await db.getAll(KEYS.EMERGENCY);
+    const doctors = await db.getAll(KEYS.DOCTORS);
+    return cases.map(c => ({
+      ...c,
+      assignedDoctor: doctors.find(doc => doc.id === c.assignedDoctorId) || null
+    }));
+  },
+  async getById(id) {
+    const cases = await this.getAll();
+    return cases.find(c => c.id === id) || null;
+  },
+  async create(caseData, userId = 'system') {
+    return await db.create(KEYS.EMERGENCY, { ...caseData, userId });
+  },
+  async update(id, caseData, userId = 'system') {
+    return await db.update(KEYS.EMERGENCY, id, { ...caseData, userId });
+  },
+  async delete(id, userId = 'system') {
+    return await db.delete(KEYS.EMERGENCY, id, userId);
+  }
+};
+
+// ==========================================
+// 12. MESSAGE SERVICE
+// ==========================================
+export const messageService = {
+  async getAll() {
+    const msgs = await db.getAll(KEYS.MESSAGES);
+    const users = await db.getAll(KEYS.USERS);
+    return msgs.map(m => ({
+      ...m,
+      sender: users.find(u => u.id === m.senderId) || null,
+      receiver: users.find(u => u.id === m.receiverId) || null
+    }));
+  },
+  async send(senderId, receiverId, text, userId = 'system') {
+    return await db.create(KEYS.MESSAGES, {
+      senderId,
+      receiverId,
+      text,
+      timestamp: new Date().toISOString(),
+      isUnread: true,
+      userId
+    });
+  },
+  async markAsRead(id, userId = 'system') {
+    return await db.update(KEYS.MESSAGES, id, { isUnread: false, userId });
+  }
+};
+
+// ==========================================
+// 13. NOTIFICATION SERVICE
+// ==========================================
+export const notificationService = {
+  async getAll() {
+    return await db.getAll(KEYS.NOTIFICATIONS);
+  },
+  async markAllAsRead(userId = 'system') {
+    const ntfs = await db.getAll(KEYS.NOTIFICATIONS);
+    for (const n of ntfs) {
+      if (!n.isRead) {
+        await db.update(KEYS.NOTIFICATIONS, n.id, { isRead: true, userId });
+      }
+    }
+    return await db.getAll(KEYS.NOTIFICATIONS);
+  },
+  async create(ntfData, userId = 'system') {
+    return await db.create(KEYS.NOTIFICATIONS, {
+      ...ntfData,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      userId
+    });
+  },
+  async delete(id, userId = 'system') {
+    return await db.delete(KEYS.NOTIFICATIONS, id, userId);
+  }
+};
+
+// ==========================================
+// 14. CALENDAR SERVICE
+// ==========================================
+export const calendarService = {
+  async getAll() {
+    const evts = await db.getAll(KEYS.CALENDAR_EVENTS);
+    const doctors = await db.getAll(KEYS.DOCTORS);
+    return evts.map(e => ({
+      ...e,
+      doctor: doctors.find(doc => doc.id === e.doctorId) || null
+    }));
+  },
+  async create(evtData, userId = 'system') {
+    return await db.create(KEYS.CALENDAR_EVENTS, { ...evtData, userId });
+  },
+  async update(id, evtData, userId = 'system') {
+    return await db.update(KEYS.CALENDAR_EVENTS, id, { ...evtData, userId });
+  },
+  async delete(id, userId = 'system') {
+    return await db.delete(KEYS.CALENDAR_EVENTS, id, userId);
+  }
+};
+

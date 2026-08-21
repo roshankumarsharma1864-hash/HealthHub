@@ -45,7 +45,7 @@ export const seedAll = async (force = false) => {
     {
       id: 'usr-admin-1',
       name: 'System Administrator',
-      email: 'admin@careflow.com',
+      email: 'admin@healthhub.com',
       password: 'admin', // Demo password
       role: 'Admin',
       phone: '+1 (555) 019-2831',
@@ -55,7 +55,7 @@ export const seedAll = async (force = false) => {
     {
       id: 'usr-doctor-1',
       name: 'Dr. Sarah Jenkins',
-      email: 'doctor@careflow.com',
+      email: 'doctor@healthhub.com',
       password: 'doctor',
       role: 'Doctor',
       phone: '+1 (555) 014-9988',
@@ -65,7 +65,7 @@ export const seedAll = async (force = false) => {
     {
       id: 'usr-reception-1',
       name: 'Emma Watson',
-      email: 'reception@careflow.com',
+      email: 'reception@healthhub.com',
       password: 'reception',
       role: 'Receptionist',
       phone: '+1 (555) 018-2234',
@@ -75,7 +75,7 @@ export const seedAll = async (force = false) => {
     {
       id: 'usr-pharmacy-1',
       name: 'Mark Miller',
-      email: 'pharmacy@careflow.com',
+      email: 'pharmacy@healthhub.com',
       password: 'pharmacy',
       role: 'Pharmacist',
       phone: '+1 (555) 012-7711',
@@ -85,7 +85,7 @@ export const seedAll = async (force = false) => {
     {
       id: 'usr-patient-1',
       name: 'John Doe',
-      email: 'patient@careflow.com',
+      email: 'patient@healthhub.com',
       password: 'patient',
       role: 'Patient',
       phone: '+1 (555) 011-2233',
@@ -101,7 +101,7 @@ export const seedAll = async (force = false) => {
       name: 'Dr. Sarah Jenkins',
       specialization: 'Cardiology',
       phone: '+1 (555) 014-9988',
-      email: 'jenkins@careflow.com',
+      email: 'jenkins@healthhub.com',
       availability: ['Monday', 'Wednesday', 'Friday'],
       rating: 4.9,
       avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150'
@@ -111,7 +111,7 @@ export const seedAll = async (force = false) => {
       name: 'Dr. Robert Chen',
       specialization: 'Pediatrics',
       phone: '+1 (555) 013-4411',
-      email: 'chen@careflow.com',
+      email: 'chen@healthhub.com',
       availability: ['Monday', 'Tuesday', 'Thursday'],
       rating: 4.8,
       avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150'
@@ -121,7 +121,7 @@ export const seedAll = async (force = false) => {
       name: 'Dr. Amanda Ross',
       specialization: 'Neurology',
       phone: '+1 (555) 015-8822',
-      email: 'ross@careflow.com',
+      email: 'ross@healthhub.com',
       availability: ['Tuesday', 'Wednesday', 'Thursday'],
       rating: 4.7,
       avatar: 'https://images.unsplash.com/photo-1594824813573-246434de83fb?w=150'
@@ -131,7 +131,7 @@ export const seedAll = async (force = false) => {
       name: 'Dr. James Wilson',
       specialization: 'Orthopedics',
       phone: '+1 (555) 017-6655',
-      email: 'wilson@careflow.com',
+      email: 'wilson@healthhub.com',
       availability: ['Wednesday', 'Thursday', 'Friday'],
       rating: 4.6,
       avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150'
@@ -544,11 +544,11 @@ export const seedAll = async (force = false) => {
 
   // 10. SEED HOSPITAL SETTINGS
   const settings = {
-    hospitalName: 'Careflow Medical Center',
-    hospitalLogoText: 'Careflow HMS',
+    hospitalName: 'HEALTH HUB',
+    hospitalLogoText: 'HEALTH HUB',
     hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
     hospitalPhone: '+1 (555) 100-2000',
-    hospitalEmail: 'contact@careflowmedical.com',
+    hospitalEmail: 'contact@healthhub.com',
     theme: 'light',
     taxRate: 5, // 5% VAT
     currency: '$'
@@ -590,6 +590,52 @@ export const seedAll = async (force = false) => {
     }
   ];
 
+  // 12. SEED DEPARTMENTS
+  const departments = [
+    { id: 'dept-cardio', name: 'Cardiology', icon: 'Heart', headDoctorId: docIds.jenkins, docCount: 2, patientCount: 45, todayAppts: 5 },
+    { id: 'dept-neuro', name: 'Neurology', icon: 'Brain', headDoctorId: docIds.chen, docCount: 1, patientCount: 20, todayAppts: 2 },
+    { id: 'dept-ortho', name: 'Orthopedics', icon: 'Activity', headDoctorId: docIds.ross, docCount: 1, patientCount: 30, todayAppts: 3 },
+    { id: 'dept-peds', name: 'Pediatrics', icon: 'Baby', headDoctorId: docIds.wilson, docCount: 1, patientCount: 50, todayAppts: 6 },
+    { id: 'dept-genmed', name: 'General Medicine', icon: 'Stethoscope', headDoctorId: docIds.jenkins, docCount: 2, patientCount: 85, todayAppts: 12 },
+    { id: 'dept-derm', name: 'Dermatology', icon: 'Sparkles', headDoctorId: docIds.chen, docCount: 1, patientCount: 18, todayAppts: 1 },
+    { id: 'dept-gyn', name: 'Gynecology', icon: 'Female', headDoctorId: docIds.ross, docCount: 1, patientCount: 25, todayAppts: 2 },
+    { id: 'dept-dent', name: 'Dentistry', icon: 'Smile', headDoctorId: docIds.wilson, docCount: 1, patientCount: 22, todayAppts: 4 },
+    { id: 'dept-er', name: 'Emergency', icon: 'Flame', headDoctorId: docIds.jenkins, docCount: 2, patientCount: 14, todayAppts: 8 },
+    { id: 'dept-opht', name: 'Ophthalmology', icon: 'Eye', headDoctorId: docIds.chen, docCount: 1, patientCount: 16, todayAppts: 2 }
+  ];
+
+  // 13. SEED EMERGENCY ROOM CASES
+  const emergencyCases = [
+    { id: 'er-1', patientName: 'David Miller', age: 48, gender: 'Male', priority: 'Critical', condition: 'Acute Myocardial Infarction', assignedDoctorId: docIds.jenkins, arrivalTime: new Date(Date.now() - 40 * 60 * 1000).toISOString(), status: 'Admitted', roomNumber: 'ER-101' },
+    { id: 'er-2', patientName: 'Sophia Loren', age: 34, gender: 'Female', priority: 'High', condition: 'Multiple Trauma from MVA', assignedDoctorId: docIds.ross, arrivalTime: new Date(Date.now() - 90 * 60 * 1000).toISOString(), status: 'Under Observation', roomNumber: 'ER-102' },
+    { id: 'er-3', patientName: 'Liam Neeson', age: 60, gender: 'Male', priority: 'Critical', condition: 'Stroke symptoms', assignedDoctorId: docIds.chen, arrivalTime: new Date(Date.now() - 20 * 60 * 1000).toISOString(), status: 'In Surgery', roomNumber: 'OR-2' },
+    { id: 'er-4', patientName: 'Emma Watson', age: 29, gender: 'Female', priority: 'Medium', condition: 'Severe Asthma Exacerbation', assignedDoctorId: docIds.wilson, arrivalTime: new Date(Date.now() - 120 * 60 * 1000).toISOString(), status: 'Discharged', roomNumber: 'ER-103' },
+    { id: 'er-5', patientName: 'Bruce Wayne', age: 42, gender: 'Male', priority: 'Low', condition: 'Laceration on forearm', assignedDoctorId: docIds.ross, arrivalTime: new Date(Date.now() - 180 * 60 * 1000).toISOString(), status: 'Treated & Released', roomNumber: 'ER-104' }
+  ];
+
+  // 14. SEED STAFF MESSAGES
+  const messages = [
+    { id: 'msg-1', senderId: 'usr-admin-1', receiverId: 'usr-doctor-1', text: 'Hello Dr. Sarah, please review the latest cardiology schedule for next week.', timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(), isUnread: false },
+    { id: 'msg-2', senderId: 'usr-doctor-1', receiverId: 'usr-admin-1', text: 'Sure, I will look at it and optimize using the schedule assistant.', timestamp: new Date(Date.now() - 35 * 60 * 60 * 1000).toISOString(), isUnread: false },
+    { id: 'msg-3', senderId: 'usr-reception-1', receiverId: 'usr-doctor-1', text: 'Dr. Sarah, patient John Doe has arrived for his 10:00 AM checkup.', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), isUnread: true },
+    { id: 'msg-4', senderId: 'usr-pharmacist-1', receiverId: 'usr-admin-1', text: 'We are running low on Paracetamol and Insulin. Please approve the reorder.', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isUnread: true }
+  ];
+
+  // 15. SEED SYSTEM NOTIFICATIONS
+  const notifications = [
+    { id: 'ntf-1', category: 'Appointments', text: 'Dr. Sarah Jenkins has a new appointment with John Doe.', timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(), isRead: false },
+    { id: 'ntf-2', category: 'Pharmacy', text: 'Paracetamol stock is running low (Current: 120 units).', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), isRead: false },
+    { id: 'ntf-3', category: 'Payments', text: '3 invoices are currently overdue for payment.', timestamp: new Date(Date.now() - 120 * 60 * 1000).toISOString(), isRead: false },
+    { id: 'ntf-4', category: 'AI Alerts', text: 'AI detected increased patient demand in Cardiology for tomorrow.', timestamp: new Date(Date.now() - 180 * 60 * 1000).toISOString(), isRead: true }
+  ];
+
+  // 16. SEED CALENDAR EVENTS
+  const calendarEvents = [
+    { id: 'evt-1', title: 'Cardiology Board Meeting', start: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T09:00:00', end: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T10:30:00', type: 'Meeting', doctorId: docIds.jenkins, description: 'Annual cardiology budget and staff review.' },
+    { id: 'evt-2', title: 'Coronary Bypass Surgery - John Doe', start: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T08:00:00', end: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T13:00:00', type: 'Operation', doctorId: docIds.jenkins, description: 'Scheduled coronary artery bypass graft.' },
+    { id: 'evt-3', title: 'Dr. Chen Shift hours', start: new Date(Date.now()).toISOString().split('T')[0] + 'T09:00:00', end: new Date(Date.now()).toISOString().split('T')[0] + 'T17:00:00', type: 'Shift', doctorId: docIds.chen, description: 'Regular neurology shift.' }
+  ];
+
   // Save collections in localStorage Relational format
   await db.saveAllRaw(KEYS.USERS, users);
   await db.saveAllRaw(KEYS.DOCTORS, doctors);
@@ -602,8 +648,13 @@ export const seedAll = async (force = false) => {
   await db.saveAllRaw(KEYS.LAB_REPORTS, labReports);
   await db.saveAllRaw(KEYS.SETTINGS, settings);
   await db.saveAllRaw(KEYS.ACTIVITY_LOG, activityLog);
+  await db.saveAllRaw(KEYS.DEPARTMENTS, departments);
+  await db.saveAllRaw(KEYS.EMERGENCY, emergencyCases);
+  await db.saveAllRaw(KEYS.MESSAGES, messages);
+  await db.saveAllRaw(KEYS.NOTIFICATIONS, notifications);
+  await db.saveAllRaw(KEYS.CALENDAR_EVENTS, calendarEvents);
 
-  console.log('Database successfully seeded with Careflow HMS mock relational structure.');
+  console.log('Database successfully seeded with HEALTH HUB mock relational structure.');
 };
 
 // Resets demo data completely

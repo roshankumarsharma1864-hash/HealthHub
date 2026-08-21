@@ -6,58 +6,56 @@ import {
   patientService, 
   doctorService, 
   appointmentService, 
-  wardService, 
   billingService, 
-  pharmacyService, 
-  activityService 
+  activityService,
+  emergencyService,
+  departmentService
 } from '../services/hmsServices.js';
 import { 
   Users, 
   Calendar, 
-  Bed, 
+  UserCheck, 
   CreditCard, 
   AlertTriangle, 
   Plus, 
   Clock, 
   Heart,
   TrendingUp,
+  Brain,
+  ShieldAlert,
+  Flame,
+  ArrowRight,
+  Sparkles,
+  PlusCircle,
+  FileText,
   Activity,
-  ArrowRight
+  Layers,
+  ChevronDown,
+  MoreVertical,
+  MapPin,
+  Bot,
+  Pill,
+  Bed
 } from 'lucide-react';
 import { Card, Badge, Button, Modal, Input, Select, Textarea } from '../components/UI.jsx';
 import { 
   ResponsiveContainer, 
   LineChart, 
   Line, 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  Legend, 
   PieChart, 
   Pie, 
   Cell 
 } from 'recharts';
+import hospitalBanner from '../assets/health_hub_hospital.jpg';
 
 export const Dashboard = () => {
-  const { user, isAdmin, isDoctor, isReceptionist, isPharmacist } = useAuth();
+  const { user, isAdmin, isDoctor, isReceptionist } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-
-  // KPI Metrics States
-  const [stats, setStats] = useState({
-    totalPatients: 0,
-    todayAppointments: 0,
-    availableBeds: 0,
-    monthlyRevenue: 0,
-    pendingBills: 0,
-    lowStockMedicines: 0
-  });
-
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // Quick Action Modal states
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
@@ -69,53 +67,17 @@ export const Dashboard = () => {
   const [patientsList, setPatientsList] = useState([]);
   const [doctorsList, setDoctorsList] = useState([]);
 
+  // Timeframe selector for analytics
+  const [timeframe, setTimeframe] = useState('This Week');
+
   const loadDashboardData = async () => {
-    setLoading(true);
     try {
       const patients = await patientService.getAll();
-      const appointments = await appointmentService.getAll();
-      const wards = await wardService.getAll();
-      const bills = await billingService.getAll();
-      const medicines = await pharmacyService.getAll();
-      const logs = await activityService.getAll();
       const doctors = await doctorService.getAll();
-
       setPatientsList(patients);
       setDoctorsList(doctors);
-
-      // Calculations
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayApts = appointments.filter(a => a.date === todayStr && a.status !== 'Cancelled');
-      
-      const totalBeds = wards.reduce((sum, w) => sum + w.totalBeds, 0);
-      const occupiedBeds = wards.reduce((sum, w) => sum + w.occupiedBeds, 0);
-      const availableBeds = Math.max(0, totalBeds - occupiedBeds);
-
-      // Monthly revenue sum (Bills issued in the current month)
-      const currentMonth = new Date().getMonth();
-      const paidMonthlyBills = bills.filter(b => {
-        const billDate = new Date(b.date);
-        return billDate.getMonth() === currentMonth && b.status === 'Paid';
-      });
-      const monthlyRevenue = paidMonthlyBills.reduce((sum, b) => sum + b.total, 0);
-      const pendingBills = bills.filter(b => b.status === 'Unpaid').length;
-
-      const lowStock = medicines.filter(m => m.isLowStock).length;
-
-      setStats({
-        totalPatients: patients.length,
-        todayAppointments: todayApts.length,
-        availableBeds,
-        monthlyRevenue,
-        pendingBills,
-        lowStockMedicines: lowStock
-      });
-
-      setActivities(logs.slice(0, 5));
     } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching dashboard states:', err);
     }
   };
 
@@ -151,248 +113,571 @@ export const Dashboard = () => {
     }
   };
 
-  // Static Data for Dashboard Charts
-  const trendData = [
-    { name: 'Mon', patients: 12 },
-    { name: 'Tue', patients: 19 },
-    { name: 'Wed', patients: 15 },
-    { name: 'Thu', patients: 22 },
-    { name: 'Fri', patients: 30 },
-    { name: 'Sat', patients: 8 },
-    { name: 'Sun', patients: 5 }
+  // 1. Line Chart Data - Appointment Analytics
+  const analyticsData = [
+    { name: 'Mon', appointments: 180 },
+    { name: 'Tue', appointments: 290 },
+    { name: 'Wed', appointments: 210 },
+    { name: 'Thu', appointments: 310 },
+    { name: 'Fri', appointments: 350 },
+    { name: 'Sat', appointments: 400 },
+    { name: 'Sun', appointments: 450 }
   ];
 
+  // 2. Donut Chart Data - Department Distribution
   const departmentData = [
-    { name: 'Cardiology', value: 35 },
-    { name: 'Pediatrics', value: 25 },
+    { name: 'Cardiology', value: 25 },
     { name: 'Neurology', value: 20 },
-    { name: 'Orthopedics', value: 20 }
+    { name: 'Orthopedics', value: 15 },
+    { name: 'Pediatrics', value: 15 },
+    { name: 'General Medicine', value: 10 },
+    { name: 'Dermatology', value: 8 },
+    { name: 'Others', value: 7 }
   ];
 
-  const COLORS = ['#0f766e', '#14b8a6', '#f59e0b', '#8b5cf6'];
+  const DEPT_COLORS = ['#2563eb', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#94a3b8'];
 
-  const revenueData = [
-    { name: 'May', revenue: 4200 },
-    { name: 'Jun', revenue: 5800 },
-    { name: 'Jul', revenue: 7100 },
-    { name: 'Aug', revenue: 9500 }
+  // Recent Appointments Table rows matched to the reference image
+  const recentAppointments = [
+    {
+      patient: 'Priya Sharma',
+      patientId: '#P10023',
+      doctor: 'Dr. Anjali Verma',
+      doctorSub: 'Cardiologist',
+      department: 'Cardiology',
+      date: '17 May 2024',
+      time: '10:30 AM',
+      status: 'Confirmed'
+    },
+    {
+      patient: 'Rahul Mehta',
+      patientId: '#P10024',
+      doctor: 'Dr. Vikram Singh',
+      doctorSub: 'Neurologist',
+      department: 'Neurology',
+      date: '17 May 2024',
+      time: '11:00 AM',
+      status: 'Pending'
+    },
+    {
+      patient: 'Sneha Patel',
+      patientId: '#P10025',
+      doctor: 'Dr. Neha Kapoor',
+      doctorSub: 'Pediatrician',
+      department: 'Pediatrics',
+      date: '17 May 2024',
+      time: '11:30 AM',
+      status: 'Confirmed'
+    },
+    {
+      patient: 'Amit Kumar',
+      patientId: '#P10026',
+      doctor: 'Dr. Rajesh Gupta',
+      doctorSub: 'Orthopedic',
+      department: 'Orthopedics',
+      date: '17 May 2024',
+      time: '12:00 PM',
+      status: 'Cancelled'
+    }
+  ];
+
+  // Announcements list matched to requirements
+  const announcementsList = [
+    {
+      title: 'Free Mega Health Checkup Camp',
+      date: '20 May 2024',
+      location: 'Community Center',
+      img: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=100'
+    },
+    {
+      title: 'New Cardiology OPD Starting',
+      date: '18 May 2024',
+      location: 'HEALTH HUB Hospital',
+      img: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=100'
+    },
+    {
+      title: 'Hospital Staff Meeting',
+      date: '15 May 2024',
+      location: 'Board Room',
+      img: 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?w=100'
+    },
+    {
+      title: 'Blood Donation Camp',
+      date: '12 May 2024',
+      location: 'Conference Hall',
+      img: 'https://images.unsplash.com/photo-1615461066841-6116e61058f4?w=100'
+    }
+  ];
+
+  // Quick Action triggers mapping
+  const quickActions = [
+    { label: 'New Appointment', icon: Calendar, color: 'bg-blue-50 text-blue-600', action: () => setIsAppointmentModalOpen(true) },
+    { label: 'Add Patient', icon: Users, color: 'bg-emerald-50 text-emerald-600', action: () => setIsPatientModalOpen(true) },
+    { label: 'Billing', icon: CreditCard, color: 'bg-purple-50 text-purple-600', action: () => navigate('/billing') },
+    { label: 'Add Doctor', icon: UserCheck, color: 'bg-amber-50 text-amber-600', action: () => navigate('/doctors') },
+    { label: 'Pharmacy', icon: Pill, color: 'bg-teal-50 text-teal-650', action: () => navigate('/pharmacy') },
+    { label: 'Reports', icon: FileText, color: 'bg-red-50 text-red-600', action: () => navigate('/reports') }
   ];
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-teal-700 to-teal-900 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-premium">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-teal-600 rounded-full filter blur-3xl opacity-30 translate-x-12 -translate-y-12" />
-        <div className="relative z-10">
-          <Badge variant="info" className="mb-3 bg-white/20 text-white border-transparent">
-            Careflow Operational Core
-          </Badge>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Good afternoon, {user?.name}
-          </h1>
-          <p className="text-teal-100 text-sm mt-2 max-w-xl">
-            You are logged in as <span className="font-bold uppercase text-teal-300">{user?.role}</span>. Here is the operational overview for Careflow Medical Center today.
-          </p>
+    <div className="flex flex-col gap-6 animate-fade-in select-none">
+      
+      {/* 1. Hospital Hero Banner */}
+      <div 
+        className="w-full h-64 md:h-72 rounded-2xl overflow-hidden bg-cover bg-center relative shadow-premium flex flex-col justify-end p-6 md:p-8"
+        style={{ backgroundImage: `url(${hospitalBanner})` }}
+      >
+        <div className="absolute inset-0 bg-slate-950/45 z-0" />
+        <div className="relative z-10 text-white flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+              Good Morning, Admin! 👋
+            </h1>
+            <p className="text-slate-100 text-sm mt-1.5 font-medium max-w-xl">
+              Welcome back to HEALTH HUB Hospital Dashboard
+            </p>
+          </div>
+
+          {/* Banner Statistics */}
+          <div className="flex flex-wrap gap-3 mt-2 md:mt-0 select-none">
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs">
+              <span className="font-extrabold text-blue-300">10K+</span>
+              <span className="text-slate-200">Happy Patients</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs">
+              <span className="font-extrabold text-blue-300">200+</span>
+              <span className="text-slate-200">Expert Doctors</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs">
+              <span className="font-extrabold text-blue-300">50+</span>
+              <span className="text-slate-200">Departments</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs">
+              <span className="font-extrabold text-blue-300">98%</span>
+              <span className="text-slate-200">Satisfaction Rate</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* 2. KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
-        {/* Total Patients */}
-        <Card className="flex flex-col justify-between hover:-translate-y-1 hover:border-teal-300/30">
+        <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Patients</span>
-            <Users className="w-5 h-5 text-teal-600" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Patients</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalPatients}</span>
-            <p className="text-[10px] text-emerald-500 font-bold mt-1">↑ Active database</p>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-800 dark:text-white">12,540</span>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 8.5% from last month</p>
           </div>
         </Card>
 
-        {/* Today's Appointments */}
-        <Card className="flex flex-col justify-between hover:-translate-y-1 hover:border-teal-300/30">
+        <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Today's Appointments</span>
-            <Calendar className="w-5 h-5 text-indigo-600" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">Today's Appts</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Calendar className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.todayAppointments}</span>
-            <p className="text-[10px] text-slate-400 mt-1">Today scheduled</p>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-800 dark:text-white">128</span>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 12.3% from yesterday</p>
           </div>
         </Card>
 
-        {/* Available Beds */}
-        <Card className="flex flex-col justify-between hover:-translate-y-1 hover:border-teal-300/30">
+        <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Available Beds</span>
-            <Bed className="w-5 h-5 text-emerald-600" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Doctors</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <UserCheck className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.availableBeds}</span>
-            <p className="text-[10px] text-emerald-600 font-bold mt-1">Admissions ready</p>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-800 dark:text-white">156</span>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 3.2% from last month</p>
           </div>
         </Card>
 
-        {/* Monthly Revenue */}
-        <Card className="flex flex-col justify-between hover:-translate-y-1 hover:border-teal-300/30">
+        <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Monthly Revenue</span>
-            <CreditCard className="w-5 h-5 text-teal-600" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">Available Doctors</span>
+            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">${stats.monthlyRevenue.toFixed(0)}</span>
-            <p className="text-[10px] text-emerald-500 font-bold mt-1">↑ Current month</p>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-800 dark:text-white">42</span>
+            <p className="text-[9px] text-emerald-600 font-extrabold mt-1">Available Now</p>
           </div>
         </Card>
 
-        {/* Pending Bills */}
-        <Card className="flex flex-col justify-between hover:-translate-y-1 hover:border-teal-300/30">
+        <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Pending Bills</span>
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">Hospital Revenue</span>
+            <div className="w-8 h-8 rounded-lg bg-red-50 text-red-650 flex items-center justify-center">
+              <CreditCard className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.pendingBills}</span>
-            <p className="text-[10px] text-amber-600 font-bold mt-1">Awaiting payment</p>
+          <div className="mt-3">
+            <span className="text-xl font-black text-slate-800 dark:text-white">₹8,45,231</span>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 15.8% from last month</p>
           </div>
         </Card>
 
-        {/* Low Stock Pharmacy */}
-        <Card className="flex flex-col justify-between hover:-translate-y-1 hover:border-teal-300/30">
+        <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Low Stock Meds</span>
-            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">Emergency Cases</span>
+            <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+              <Flame className="w-4 h-4" />
+            </div>
           </div>
-          <div className="mt-4">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.lowStockMedicines}</span>
-            <p className="text-[10px] text-red-500 font-bold mt-1">Needs attention</p>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-800 dark:text-white">7</span>
+            <p className="text-[9px] text-red-600 font-extrabold mt-1">Critical Cases</p>
           </div>
         </Card>
       </div>
 
-      {/* Dynamic Actions Quick panel (Show actions matching role) */}
-      {(isAdmin || isReceptionist || isDoctor) && (
-        <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-2xl shadow-premium">
-          <span className="text-xs font-bold uppercase text-slate-400 tracking-wider mr-2 select-none">Quick Actions Panel:</span>
-          {(isAdmin || isReceptionist) && (
-            <>
-              <Button size="sm" variant="primary" icon={Plus} onClick={() => setIsPatientModalOpen(true)}>
-                Add Patient
-              </Button>
-              <Button size="sm" variant="outline" icon={Calendar} onClick={() => setIsAppointmentModalOpen(true)}>
-                Book Appointment
-              </Button>
-            </>
-          )}
-          {isDoctor && (
-            <Button size="sm" variant="secondary" icon={Clock} onClick={() => navigate('/prescriptions')}>
-              Write Prescription
-            </Button>
-          )}
-          {isAdmin && (
-            <Button size="sm" variant="outline" icon={CreditCard} onClick={() => navigate('/billing')}>
-              Generate Bill Invoice
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Charts Grid */}
+      {/* 3. Charts and AI Insights row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Patient Admission Trends */}
-        <Card title="Patient Admissions trend" subtitle="Total admissions recorded during the week" className="lg:col-span-2">
-          <div className="h-72 w-full">
+        
+        {/* Appointment Analytics Chart */}
+        <Card 
+          title="Appointment Analytics" 
+          subtitle={
+            <div className="flex items-center gap-1">
+              <span className="text-slate-800 dark:text-white font-black text-sm">Total Appointments: 1,246</span>
+              <span className="text-[10px] text-emerald-500 font-bold ml-1">↑ 18.6%</span>
+            </div>
+          }
+          className="lg:col-span-1"
+          headerActions={
+            <Select
+              id="analytics-timeframe"
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value)}
+              options={[{ value: 'This Week', label: 'This Week' }, { value: 'This Month', label: 'This Month' }, { value: 'This Year', label: 'This Year' }]}
+              className="py-1 px-2 border-slate-200"
+            />
+          }
+        >
+          <div className="h-60 w-full mt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                <YAxis stroke="#94a3b8" fontSize={11} />
+              <LineChart data={analyticsData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
+                <YAxis stroke="#94a3b8" fontSize={10} />
                 <Tooltip />
-                <Line type="monotone" dataKey="patients" stroke="#0f766e" strokeWidth={3} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="appointments" stroke="#2563eb" strokeWidth={3.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        {/* Department Wise Patient Distribution */}
-        <Card title="Department Distribution" subtitle="Active clinical cases allocation">
-          <div className="h-60 w-full flex items-center justify-center">
+        {/* Department Distribution Donut */}
+        <Card 
+          title="Department Distribution" 
+          subtitle="Clinical case allocation distribution"
+          className="lg:col-span-1"
+          headerActions={
+            <button 
+              onClick={() => navigate('/departments')}
+              className="text-xs text-blue-600 hover:text-blue-750 font-bold cursor-pointer hover:underline"
+            >
+              View All
+            </button>
+          }
+        >
+          <div className="h-48 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={departmentData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={4}
                   dataKey="value"
                 >
                   {departmentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value) => `${value}%`} />
               </PieChart>
             </ResponsiveContainer>
           </div>
           {/* Legend */}
-          <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-semibold text-slate-500">
+          <div className="grid grid-cols-2 gap-2 mt-4 text-[9px] font-bold text-slate-500 max-h-16 overflow-y-auto">
             {departmentData.map((d, idx) => (
               <div key={idx} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
-                <span>{d.name} ({d.value}%)</span>
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: DEPT_COLORS[idx] }} />
+                <span className="truncate">{d.name} ({d.value}%)</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* AI Insights Card */}
+        <Card 
+          title={
+            <div className="flex items-center gap-2 select-none">
+              <span>AI Insights</span>
+              <Badge variant="premium">NEW</Badge>
+            </div>
+          }
+          subtitle="HEALTH HUB Support recommendations"
+          className="lg:col-span-1 bg-gradient-to-br from-blue-50/50 to-purple-50/20 border-blue-105"
+        >
+          <div className="flex flex-col gap-3.5 mt-2">
+            
+            {/* Robot illustration head */}
+            <div className="flex items-center gap-2.5 p-2 bg-blue-50/70 rounded-xl border border-blue-100">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Bot className="w-5 h-5" />
+              </div>
+              <p className="text-[10px] text-blue-800 font-bold leading-tight">
+                Medicare AI Support assistant active. Real-time updates parsed.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 text-xs text-slate-650 font-semibold pl-1">
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <span>Patient appointments are expected to increase by 18% tomorrow.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <span>Cardiology department has the highest patient demand.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <span>5 appointments require confirmation.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <span>Pharmacy inventory for 3 medicines is running low.</span>
+              </div>
+            </div>
+
+            <Button 
+              size="sm" 
+              variant="primary" 
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 shadow-md font-bold mt-2" 
+              onClick={() => navigate('/ai-assistant')}
+            >
+              View AI Recommendations
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* 4. Recent Appointments Table & Sidebar columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Recent Appointments Card */}
+        <Card 
+          title="Recent Appointments" 
+          subtitle="Clinical consultations logs" 
+          className="lg:col-span-2 p-0 overflow-hidden"
+          headerActions={
+            <button 
+              onClick={() => navigate('/appointments')}
+              className="text-xs text-blue-600 hover:text-blue-750 font-bold cursor-pointer hover:underline"
+            >
+              View All
+            </button>
+          }
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-xs select-none">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 font-bold text-slate-400 uppercase">
+                <tr>
+                  <th className="px-5 py-3">Patient</th>
+                  <th className="px-5 py-3">Doctor</th>
+                  <th className="px-5 py-3">Department</th>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Time</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-750/50">
+                {recentAppointments.map((apt, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-750/10 transition-colors">
+                    <td className="px-5 py-3 font-bold text-slate-800 dark:text-slate-200">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-650 flex items-center justify-center font-bold text-[10px]">
+                          {apt.patient.charAt(0)}
+                        </div>
+                        <div>
+                          <div>{apt.patient}</div>
+                          <span className="text-[9px] text-slate-400 block font-mono mt-0.5">{apt.patientId}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <p className="font-bold text-slate-750 dark:text-slate-350">{apt.doctor}</p>
+                      <p className="text-[9px] text-slate-400">{apt.doctorSub}</p>
+                    </td>
+                    <td className="px-5 py-3 text-slate-500 font-semibold">{apt.department}</td>
+                    <td className="px-5 py-3 text-slate-500">{apt.date}</td>
+                    <td className="px-5 py-3 text-slate-500">{apt.time}</td>
+                    <td className="px-5 py-3">
+                      <Badge variant={
+                        apt.status === 'Confirmed' ? 'success' : 
+                        apt.status === 'Pending' ? 'warning' : 
+                        apt.status === 'Cancelled' ? 'danger' : 'neutral'
+                      }>
+                        {apt.status}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <button className="text-slate-400 hover:text-slate-655 p-1 cursor-pointer">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Announcements List */}
+        <Card 
+          title="Announcements" 
+          subtitle="Hospital events notifications"
+          className="lg:col-span-1"
+          headerActions={
+            <button 
+              onClick={() => toast.info('Announcements catalog is up-to-date.')}
+              className="text-xs text-blue-600 hover:text-blue-750 font-bold cursor-pointer hover:underline"
+            >
+              View All
+            </button>
+          }
+        >
+          <div className="flex flex-col gap-3.5 mt-2">
+            {announcementsList.map((ann, idx) => (
+              <div key={idx} className="flex gap-3 hover:bg-slate-50 dark:hover:bg-slate-750/30 p-2 rounded-xl border border-transparent hover:border-slate-100 transition-all select-none">
+                <img 
+                  src={ann.img} 
+                  alt={ann.title} 
+                  className="w-12 h-12 rounded-xl object-cover border border-slate-100 flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-white leading-snug truncate">
+                    {ann.title}
+                  </h4>
+                  <div className="flex items-center gap-1.5 text-[9px] text-slate-400 mt-1 font-semibold">
+                    <span>{ann.date}</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3 text-slate-400" /> {ann.location}</span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </Card>
       </div>
 
-      {/* Bottom Row: Revenue and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Over Time */}
-        <Card title="Monthly Revenue Report" subtitle="Total collected patient fees by month">
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-                <YAxis stroke="#94a3b8" fontSize={11} />
-                <Tooltip formatter={(value) => `$${value}`} />
-                <Bar dataKey="revenue" fill="#0f766e" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* 5. Quick Actions grid & bottom bed stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Quick Actions widget */}
+        <Card title="Quick Actions" subtitle="One-click operations panel" className="lg:col-span-1">
+          <div className="grid grid-cols-3 gap-3 select-none">
+            {quickActions.map((act, idx) => {
+              const Icon = act.icon;
+              return (
+                <button
+                  key={idx}
+                  onClick={act.action}
+                  className="p-3.5 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all duration-150 active:scale-[0.96] hover:scale-[1.02] cursor-pointer hover:shadow-sm"
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${act.color}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] text-slate-650 font-bold text-center leading-tight">
+                    {act.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </Card>
 
-        {/* Recent Activity Feed */}
-        <Card title="Hospital Activity Feed" subtitle="Live updates from clinical logs" headerActions={
-          <Button size="sm" variant="secondary" onClick={() => navigate('/settings')}>
-            View Audit Log
-          </Button>
-        }>
-          <div className="flex flex-col gap-4">
-            {activities.map((act) => (
-              <div key={act.id} className="flex items-start gap-4 p-3 hover:bg-slate-50 dark:hover:bg-slate-750/30 rounded-xl transition-all border border-transparent hover:border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950/20 text-teal-600 flex items-center justify-center flex-shrink-0 font-bold text-xs select-none">
-                  {act.action.substring(0, 1)}
-                </div>
-                <div className="flex-grow min-w-0">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">{act.details}</h4>
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-                    <span className="font-bold text-teal-600">{act.user?.name}</span>
-                    <span>•</span>
-                    <span>{new Date(act.timestamp).toLocaleString()}</span>
-                  </div>
-                </div>
+        {/* Bed Management Summary */}
+        <Card title="Bed Management Summary" subtitle="Hospital ward occupancy layout" className="lg:col-span-1 select-none">
+          <div className="grid grid-cols-2 gap-3.5">
+            <div className="p-3 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Total Beds</span>
+              <div className="flex items-baseline justify-between mt-2.5">
+                <span className="text-xl font-black text-slate-800 dark:text-white">250</span>
+                <Bed className="w-5 h-5 text-blue-500" />
+              </div>
+            </div>
+            <div className="p-3 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block font-bold">Occupied Beds</span>
+              <div className="flex items-baseline justify-between mt-2.5">
+                <span className="text-xl font-black text-red-500">180</span>
+                <Badge variant="danger">72% Occupied</Badge>
+              </div>
+            </div>
+            <div className="p-3 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block font-bold">Available Beds</span>
+              <div className="flex items-baseline justify-between mt-2.5">
+                <span className="text-xl font-black text-emerald-600">70</span>
+                <Badge variant="success">28% Available</Badge>
+              </div>
+            </div>
+            <div className="p-3 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block font-bold">ICU Beds</span>
+              <div className="flex items-baseline justify-between mt-2.5">
+                <span className="text-xl font-black text-indigo-600">25</span>
+                <Badge variant="info">10 Available</Badge>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Compact Calendar Overview */}
+        <Card 
+          title="Calendar Overview" 
+          subtitle="May 2024 schedules"
+          className="lg:col-span-1 select-none"
+          headerActions={
+            <div className="flex gap-1.5 text-[9px] font-bold uppercase select-none">
+              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-650 cursor-pointer">Month</span>
+              <span className="px-1.5 py-0.5 rounded text-slate-400 cursor-pointer">Week</span>
+              <span className="px-1.5 py-0.5 rounded text-slate-400 cursor-pointer">Day</span>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-7 gap-2 text-center text-[10px] mt-2 font-bold">
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(day => (
+              <span key={day} className="text-slate-400 uppercase tracking-wider">{day}</span>
+            ))}
+            {Array.from({ length: 31 }, (_, i) => i + 1).slice(12, 19).map(day => (
+              <div 
+                key={day} 
+                className={`py-2 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer relative ${
+                  day === 17 
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' 
+                    : 'text-slate-650 hover:bg-slate-50'
+                }`}
+              >
+                <span>{day}</span>
+                {day === 15 && <span className="absolute bottom-1 w-1 h-1 bg-red-500 rounded-full" />}
+                {day === 17 && <span className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />}
+                {day === 18 && <span className="absolute bottom-1 w-1 h-1 bg-emerald-500 rounded-full" />}
               </div>
             ))}
-            {activities.length === 0 && (
-              <div className="text-center text-slate-400 py-8 text-sm">
-                No recent database transactions recorded.
-              </div>
-            )}
           </div>
         </Card>
       </div>
@@ -536,4 +821,5 @@ export const Dashboard = () => {
     </div>
   );
 };
+
 export default Dashboard;

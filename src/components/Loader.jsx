@@ -24,8 +24,8 @@ export const Loader = () => {
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/65 dark:bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
       <div className="flex flex-col items-center gap-3">
         <div ref={containerRef} className="w-36 h-36" />
-        <span className="text-xs font-bold text-teal-400 dark:text-teal-400 tracking-widest uppercase animate-pulse">
-          Loading Careflow Records...
+        <span className="text-xs font-bold text-blue-500 dark:text-blue-400 tracking-widest uppercase animate-pulse">
+          Loading HEALTH HUB Records...
         </span>
       </div>
     </div>

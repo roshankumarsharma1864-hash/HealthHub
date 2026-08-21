@@ -1,20 +1,25 @@
-// Low-level LocalStorage Relational DB driver for Careflow HMS
+// Low-level LocalStorage Relational DB driver for HEALTH HUB
 // Exposes Promise-based async methods and simulates API network latency
 
 const LATENCY = 300; // 300ms simulated network lag
 
 export const KEYS = {
-  USERS: 'hms_users',
-  PATIENTS: 'hms_patients',
-  DOCTORS: 'hms_doctors',
-  APPOINTMENTS: 'hms_appointments',
-  WARDS: 'hms_wards',
-  BILLS: 'hms_bills',
-  MEDICINES: 'hms_medicines',
-  PRESCRIPTIONS: 'hms_prescriptions',
-  LAB_REPORTS: 'hms_labReports',
-  ACTIVITY_LOG: 'hms_activityLog',
-  SETTINGS: 'hms_settings'
+  USERS: 'healthhub_users',
+  PATIENTS: 'healthhub_patients',
+  DOCTORS: 'healthhub_doctors',
+  APPOINTMENTS: 'healthhub_appointments',
+  WARDS: 'healthhub_wards',
+  BILLS: 'healthhub_bills',
+  MEDICINES: 'healthhub_medicines',
+  PRESCRIPTIONS: 'healthhub_prescriptions',
+  LAB_REPORTS: 'healthhub_labReports',
+  ACTIVITY_LOG: 'healthhub_activityLog',
+  SETTINGS: 'healthhub_settings',
+  DEPARTMENTS: 'healthhub_departments',
+  EMERGENCY: 'healthhub_emergency',
+  MESSAGES: 'healthhub_messages',
+  NOTIFICATIONS: 'healthhub_notifications',
+  CALENDAR_EVENTS: 'healthhub_calendar_events'
 };
 
 const delay = (ms = LATENCY) => new Promise(resolve => setTimeout(resolve, ms));
@@ -51,7 +56,7 @@ export const db = {
       await this.logActivity(
         record.userId || 'system', 
         'CREATE', 
-        key.replace('hms_', ''), 
+        key.replace('healthhub_', ''), 
         `Created record with ID ${newRecord.id}`
       );
     }
@@ -81,7 +86,7 @@ export const db = {
       await this.logActivity(
         updates.userId || 'system', 
         'UPDATE', 
-        key.replace('hms_', ''), 
+        key.replace('healthhub_', ''), 
         `Updated record with ID ${id}`
       );
     }
@@ -105,7 +110,7 @@ export const db = {
       await this.logActivity(
         userId, 
         'DELETE', 
-        key.replace('hms_', ''), 
+        key.replace('healthhub_', ''), 
         `Deleted record with ID ${id}`
       );
     }
