@@ -123,7 +123,7 @@ export const CalendarPage = () => {
             <div className="flex flex-col gap-3.5 text-xs text-slate-550 leading-relaxed font-semibold">
               <div className="flex items-start gap-2.5">
                 <Sparkles className="w-4.5 h-4.5 text-primary-650 flex-shrink-0 animate-pulse mt-0.5" />
-                <span>AI detected no overlap conflicts between Dr. Sarah Jenkins shift duty and Scheduled Cardiology surgery.</span>
+                <span>AI detected no overlap conflicts between Dr. Rajeshwari Sengupta shift duty and Scheduled Cardiology surgery.</span>
               </div>
               <div className="flex items-start gap-2.5">
                 <CheckSquare className="w-4.5 h-4.5 text-emerald-555 flex-shrink-0 mt-0.5" />

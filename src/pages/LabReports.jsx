@@ -56,7 +56,7 @@ export const LabReports = () => {
     try {
       await labService.create({
         ...orderForm,
-        doctorId: docId || doctors[0]?.id || 'doc-sarah-jenkins-101'
+        doctorId: docId || doctors[0]?.id || 'doc-rajeshwari-101'
       }, user.id);
       toast.success(`Lab order "${orderForm.testName}" generated.`);
       setIsOrderModalOpen(false);
@@ -76,7 +76,7 @@ export const LabReports = () => {
 
     try {
       await labService.updateResult(selectedReport.id, resultText, 'Completed', user.id);
-      toast.success('Lab results compiled. Diagnostic fee ($75.00) automatically invoiced.');
+      toast.success('Lab results compiled. Diagnostic fee (₹750.00) automatically invoiced.');
       setIsResultModalOpen(false);
       setResultText('');
       loadData();
@@ -242,7 +242,7 @@ export const LabReports = () => {
       <Modal isOpen={isResultModalOpen} onClose={() => setIsResultModalOpen(false)} title={`Enter Specimen Results: ${selectedReport?.testName}`}>
         <form onSubmit={handleResultSubmit} className="flex flex-col gap-4">
           <p className="text-xs text-slate-400">
-            Enter test observations for patient <span className="font-bold text-slate-650">{selectedReport?.patient?.name}</span>. Submitting will flag the status completed and append the diagnostic fee of $75.00 to their bill.
+            Enter test observations for patient <span className="font-bold text-slate-650">{selectedReport?.patient?.name}</span>. Submitting will flag the status completed and append the diagnostic fee of ₹750.00 to their bill.
           </p>
           <Textarea
             label="Laboratory Test Observations"

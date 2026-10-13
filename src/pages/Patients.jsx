@@ -11,6 +11,7 @@ import {
   prescriptionService,
   labService
 } from '../services/hmsServices.js';
+import { formatINR } from '../utils/currency.js';
 import { 
   Search, 
   Plus, 
@@ -223,7 +224,7 @@ export const Patients = () => {
 --------------------------------------------------
 * Clinical Overview: Patient has a history of ${selectedPatient.medicalHistory || 'no chronic diseases'}. Allergies noted: ${selectedPatient.allergies || 'none'}.
 * Operations Activity: The database records ${selectedPatient.history?.appointments?.length || 0} scheduled checkups and ${selectedPatient.history?.prescriptions?.length || 0} filled pharmacy prescriptions.
-* Billing Status: The patient has ${selectedPatient.history?.bills?.filter(b => b.status === 'Unpaid').length || 0} unpaid invoices. Total revenue generated to date is $${selectedPatient.history?.bills?.reduce((sum, b) => sum + b.total, 0) || 0}.
+* Billing Status: The patient has ${selectedPatient.history?.bills?.filter(b => b.status === 'Unpaid').length || 0} unpaid invoices. Total revenue generated to date is ${formatINR(selectedPatient.history?.bills?.reduce((sum, b) => sum + b.total, 0) || 0)}.
 * Administrative Insights: HEALTH HUB AI recommends scheduling a cardiology review if symptoms persist and verifying that medication stocks are available for current prescriptions.`;
       setAiSummary(summaryText);
       setGeneratingAi(false);
@@ -518,7 +519,7 @@ export const Patients = () => {
                       <div key={bill.id} className="p-4 border border-slate-100 dark:border-slate-800 rounded-2xl flex justify-between items-center">
                         <div>
                           <h4 className="text-sm font-bold text-slate-850 dark:text-slate-250">Invoice ID: {bill.id.substring(0, 8)}</h4>
-                          <p className="text-xs text-slate-450 mt-0.5">Total Amount: ${bill.total.toFixed(2)} | Date: {bill.date}</p>
+                          <p className="text-xs text-slate-450 mt-0.5">Total Amount: {formatINR(bill.total)} | Date: {bill.date}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge variant={bill.status === 'Paid' ? 'success' : 'danger'}>
@@ -716,7 +717,7 @@ export const Patients = () => {
             id="p-name" 
             value={patientForm.name} 
             onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
-            placeholder="John Doe" 
+            placeholder="Rajesh Kumar" 
             required 
             className="col-span-2"
           />
@@ -741,7 +742,7 @@ export const Patients = () => {
             id="p-phone" 
             value={patientForm.phone} 
             onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })}
-            placeholder="+1 555-0102" 
+            placeholder="+91 98450 12233" 
             required 
           />
           <Select 
@@ -758,7 +759,7 @@ export const Patients = () => {
             onChange={(e) => setPatientForm({ ...patientForm, assignedDoctorId: e.target.value })}
             options={[
               { value: '', label: '-- Choose Doctor --' },
-              ...doctors.map(d => ({ value: d.id, label: `Dr. ${d.name} (${d.specialization})` }))
+              ...doctors.map(d => ({ value: d.id, label: `${d.name} (${d.specialization})` }))
             ]}
           />
           <Input 
@@ -773,7 +774,7 @@ export const Patients = () => {
             id="p-emergency" 
             value={patientForm.emergencyContact} 
             onChange={(e) => setPatientForm({ ...patientForm, emergencyContact: e.target.value })}
-            placeholder="Jane Doe (+1 555-011-2244)" 
+            placeholder="Sunita Kumar (+91 98450 12244)" 
             className="col-span-2"
             required
           />
@@ -790,7 +791,7 @@ export const Patients = () => {
             id="p-addr" 
             value={patientForm.address} 
             onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
-            placeholder="100 Main St, Boston, MA" 
+            placeholder="Plot 104, 12th Main, Indiranagar, Bengaluru, KA" 
             className="col-span-2"
             required
           />

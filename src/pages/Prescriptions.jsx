@@ -75,7 +75,7 @@ export const Prescriptions = () => {
 
     const prescriptionData = {
       patientId,
-      doctorId: docId || 'doc-sarah-jenkins-101',
+      doctorId: docId || 'doc-rajeshwari-101',
       medicines: presMeds,
       notes
     };

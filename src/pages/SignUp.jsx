@@ -92,7 +92,7 @@ export const SignUp = () => {
             icon={User}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="John Doe"
+            placeholder="Rajesh Kumar"
             required
           />
 
@@ -104,7 +104,7 @@ export const SignUp = () => {
               icon={Mail}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="john.doe@healthhub.com"
+              placeholder="rajesh.kumar@healthhub.in"
               required
             />
             <Input
@@ -114,7 +114,7 @@ export const SignUp = () => {
               icon={Phone}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 (555) 123-4567"
+              placeholder="+91 98450 12233"
               required
             />
           </div>

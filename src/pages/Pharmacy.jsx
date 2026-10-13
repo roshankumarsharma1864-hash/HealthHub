@@ -4,6 +4,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { pharmacyService } from '../services/hmsServices.js';
 import { Plus, Edit2, Trash2, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 import { Button, Input, Select, Card, Badge, Modal } from '../components/UI.jsx';
+import { formatINR } from '../utils/currency.js';
 
 export const Pharmacy = () => {
   const { user, isAdmin, isPharmacist } = useAuth();
@@ -20,7 +21,7 @@ export const Pharmacy = () => {
 
   // Form states
   const [form, setForm] = useState({
-    name: '', category: 'Antibiotics', stock: 100, unitPrice: 10.00, expiryDate: '', supplier: ''
+    name: '', category: 'Antibiotics', stock: 100, unitPrice: 50.00, expiryDate: '', supplier: ''
   });
 
   // Restock state
@@ -241,7 +242,7 @@ export const Pharmacy = () => {
             <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
               <th className="py-3 px-4">Medicine Name</th>
               <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Price</th>
+              <th className="py-3 px-4">Price (₹)</th>
               <th className="py-3 px-4">Stock Quantity</th>
               <th className="py-3 px-4">Expiry Date</th>
               <th className="py-3 px-4">Supplier</th>
@@ -254,7 +255,7 @@ export const Pharmacy = () => {
               <tr key={med.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-750/10 transition-colors">
                 <td className="py-3 px-4 font-bold text-slate-850 dark:text-slate-200">{med.name}</td>
                 <td className="py-3 px-4 text-slate-500">{med.category}</td>
-                <td className="py-3 px-4 text-primary-600 font-semibold">${med.unitPrice.toFixed(2)}</td>
+                <td className="py-3 px-4 text-primary-600 font-semibold">{formatINR(med.unitPrice)}</td>
                 <td className="py-3 px-4 font-bold text-slate-750 dark:text-slate-250">
                   {med.stock} Units
                 </td>
@@ -327,13 +328,13 @@ export const Pharmacy = () => {
               ]}
             />
             <Input 
-              label="Price per Unit ($)" 
+              label="Price per Unit (₹)" 
               id="med-price" 
               type="number"
               step="0.01"
               value={form.unitPrice} 
               onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-              placeholder="10.00" 
+              placeholder="45.00" 
               required 
             />
           </div>

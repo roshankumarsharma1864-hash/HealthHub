@@ -690,7 +690,7 @@ export const Dashboard = () => {
             id="p-name" 
             value={patientForm.name} 
             onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
-            placeholder="John Doe" 
+            placeholder="Rajesh Kumar" 
             required 
             className="col-span-2"
           />
@@ -715,7 +715,7 @@ export const Dashboard = () => {
             id="p-phone" 
             value={patientForm.phone} 
             onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })}
-            placeholder="+1 555-0102" 
+            placeholder="+91 98450 12233" 
             required 
           />
           <Select 
@@ -738,7 +738,7 @@ export const Dashboard = () => {
             id="p-emergency" 
             value={patientForm.emergencyContact} 
             onChange={(e) => setPatientForm({ ...patientForm, emergencyContact: e.target.value })}
-            placeholder="Name & phone number" 
+            placeholder="Sunita Kumar (+91 98450 12244)" 
             className="col-span-2"
             required
           />
@@ -747,7 +747,7 @@ export const Dashboard = () => {
             id="p-addr" 
             value={patientForm.address} 
             onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
-            placeholder="Street address, city" 
+            placeholder="Plot 104, 12th Main, Indiranagar, Bengaluru, KA" 
             className="col-span-2"
             required
           />

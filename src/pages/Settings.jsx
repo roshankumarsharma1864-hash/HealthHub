@@ -3,8 +3,9 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { KEYS, db } from '../services/db.js';
 import { resetDemo } from '../services/seedData.js';
-import { Plus, UserPlus, ShieldAlert, Sparkles, RefreshCw, Eye, EyeOff, Save } from 'lucide-react';
-import { Button, Input, Select, Card, Badge, Modal } from '../components/UI.jsx';
+import { Plus, UserPlus, ShieldAlert, Sparkles, RefreshCw, Eye, EyeOff, Save, IndianRupee } from 'lucide-react';
+import { Button, Input, Select, Card, Badge, Modal, Textarea } from '../components/UI.jsx';
+import { INDIAN_HOSPITAL_DEFAULTS } from '../utils/currency.js';
 
 export const Settings = ({ isDarkMode, toggleDarkMode }) => {
   const { user, isAdmin, register } = useAuth();
@@ -12,7 +13,7 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
 
   const [usersList, setUsersList] = useState([]);
   const [hProfile, setHProfile] = useState({
-    hospitalName: '', hospitalAddress: '', hospitalPhone: '', hospitalEmail: ''
+    ...INDIAN_HOSPITAL_DEFAULTS
   });
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -24,17 +25,10 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
       setUsersList(uList);
 
       const savedSettings = await db.getAll(KEYS.SETTINGS);
-      if (savedSettings && !Array.isArray(savedSettings)) {
-        setHProfile(savedSettings);
+      if (savedSettings && !Array.isArray(savedSettings) && savedSettings.hospitalName) {
+        setHProfile({ ...INDIAN_HOSPITAL_DEFAULTS, ...savedSettings });
       } else {
-        // Seeding defaults
-        const defaults = {
-          hospitalName: 'HEALTH HUB',
-          hospitalAddress: '750 Health Plaza Blvd, Boston, MA 02111',
-          hospitalPhone: '+1 (555) 100-2000',
-          hospitalEmail: 'contact@healthhub.com'
-        };
-        setHProfile(defaults);
+        setHProfile({ ...INDIAN_HOSPITAL_DEFAULTS });
       }
     } catch (err) {
       console.error(err);
@@ -130,7 +124,7 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
               onChange={(e) => setHProfile({ ...hProfile, hospitalEmail: e.target.value })}
               required
             />
-            <Textarea
+            <Input
               label="Physical Postal Address"
               id="h-addr"
               value={hProfile.hospitalAddress}
@@ -138,9 +132,43 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
               required
               className="col-span-2"
             />
+            <Input
+              label="Hospital GSTIN (Tax Identification)"
+              id="h-gstin"
+              value={hProfile.gstin || ''}
+              onChange={(e) => setHProfile({ ...hProfile, gstin: e.target.value })}
+              placeholder="29AAACH1234M1Z5"
+              required
+            />
+            <Input
+              label="Hospital Clinical Reg No."
+              id="h-regno"
+              value={hProfile.hospRegNo || ''}
+              onChange={(e) => setHProfile({ ...hProfile, hospRegNo: e.target.value })}
+              placeholder="KA/BLR/MED/2024/9842"
+              required
+            />
+            <Input
+              label="Billing Counter UPI VPA (for QR)"
+              id="h-upi"
+              value={hProfile.upiVpa || ''}
+              onChange={(e) => setHProfile({ ...hProfile, upiVpa: e.target.value })}
+              placeholder="healthhub.billing@icici"
+              required
+            />
+            <Select
+              label="Default Billing Currency"
+              id="h-curr"
+              value={hProfile.currency || '₹'}
+              onChange={(e) => setHProfile({ ...hProfile, currency: e.target.value })}
+              options={[
+                { value: '₹', label: '₹ INR (Indian Rupee)' },
+                { value: '$', label: '$ USD (United States Dollar)' }
+              ]}
+            />
             <div className="col-span-2 flex justify-end">
               <Button type="submit" variant="primary" icon={Save}>
-                Save Profile
+                Save Hospital Profile & GST Settings
               </Button>
             </div>
           </form>
@@ -243,7 +271,7 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
             id="usr-name"
             value={userForm.name}
             onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-            placeholder="John Miller"
+            placeholder="Sunita Deshmukh"
             required
           />
           <Input
@@ -252,7 +280,7 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
             type="email"
             value={userForm.email}
             onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-            placeholder="miller@healthhub.com"
+            placeholder="sunita@healthhub.in"
             required
           />
           <Input
@@ -282,7 +310,7 @@ export const Settings = ({ isDarkMode, toggleDarkMode }) => {
               id="usr-phone"
               value={userForm.phone}
               onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-              placeholder="+1 (555) 0182"
+              placeholder="+91 98450 00002"
               required
             />
           </div>

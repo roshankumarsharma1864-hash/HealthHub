@@ -119,7 +119,7 @@ export const Laboratory = () => {
 --------------------------------------------------
 * Test Sample: ${rep.testName} (${rep.testCategory})
 * Result Findings: "${rep.resultText || 'Pending laboratory input'}"
-* AI Clinical Assessment: WBC levels show normal patterns. AI diagnostics suggests matching WBC counts with historical panels to verify potential infection recovery. Follow up with cardiologist Dr. Sarah Jenkins if symptoms recur.`
+* AI Clinical Assessment: WBC levels show normal patterns. AI diagnostics suggests matching WBC counts with historical panels to verify potential infection recovery. Follow up with cardiologist Dr. Rajeshwari Sengupta if symptoms recur.`
       );
       toast.success('AI Diagnostics summary completed.');
     }, 1200);

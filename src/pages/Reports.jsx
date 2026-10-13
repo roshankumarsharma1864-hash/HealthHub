@@ -25,21 +25,22 @@ export const Reports = () => {
       setGenerating(false);
       let text = '';
       if (tpl.id === 'financial') {
-        text = `MediCare+ Financial Audit Statement:
+        text = `HEALTH HUB Super Speciality Hospital - Financial Audit Statement:
 --------------------------------------------------
-* Reporting Period: August 2026
-* Total Billed Revenue: $58,350
-* Collected Payments: $39,200 (67% recovery)
-* Outstanding Invoices: $19,150 (33% pending)
-* Tax (VAT 5%): $2,917.50
-* AI Operational Recommendation: Send automated payment reminders to patients with outstanding invoices older than 14 days.`;
+* Reporting Period: October 2026 (Q3 FY 2026-27)
+* Total Billed Revenue: ₹48,50,000
+* Collected Payments: ₹38,20,000 (78.8% recovery via UPI / Cards / Cash)
+* Outstanding Invoices: ₹10,30,000 (21.2% pending - mostly TPA / Insurance claims)
+* GST Collected (5% - CGST 2.5% + SGST 2.5%): ₹2,42,500
+* Top Payment Modes: UPI / QR (54%), Credit/Debit Cards (26%), TPA Cashless (12%), Cash (8%)
+* AI Operational Recommendation: Enable automated SMS/WhatsApp payment links with UPI QR for patients with outstanding dues older than 7 days.`;
       } else if (tpl.id === 'clinical') {
-        text = `MediCare+ Clinical Intake Report:
+        text = `HEALTH HUB Clinical Intake Report:
 --------------------------------------------------
 * Total Admitted Patients: 24 (ICU: 4, General: 12, ER: 8)
-* Doctor Workloads: Dr. Sarah Jenkins is handling 15 active charts.
+* Doctor Workloads: Dr. Rajeshwari Sengupta is handling 15 active charts.
 * Average Visit Duration: 4.2 Days.
-* AI Operational Recommendation: Mobilize 2 cardiology floaters to support Dr. Jenkins' diagnostic backlog.`;
+* AI Operational Recommendation: Mobilize 2 cardiology floaters to support Dr. Rajeshwari's diagnostic backlog.`;
       } else if (tpl.id === 'pharmacy') {
         text = `MediCare+ Pharmacy Depletion Forecast:
 --------------------------------------------------

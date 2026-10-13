@@ -228,7 +228,7 @@ export const Emergency = () => {
             id="er-name" 
             value={form.patientName} 
             onChange={(e) => setForm({ ...form, patientName: e.target.value })}
-            placeholder="David Miller" 
+            placeholder="Manoj Verma" 
             required 
           />
           <div className="grid grid-cols-2 gap-4">

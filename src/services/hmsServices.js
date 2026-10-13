@@ -144,11 +144,11 @@ export const patientService = {
     
     // Generate room charges bill item automatically on discharge
     const ward = await wardService.getById(patient.wardId);
-    let roomCost = 150; // default General
+    let roomCost = 1500; // default General Ward (INR)
     if (ward) {
-      if (ward.type === 'ICU') roomCost = 500;
-      else if (ward.type === 'Private') roomCost = 350;
-      else if (ward.type === 'Emergency') roomCost = 200;
+      if (ward.type === 'ICU') roomCost = 6500;
+      else if (ward.type === 'Private') roomCost = 3500;
+      else if (ward.type === 'Emergency') roomCost = 2500;
     }
 
     // Calculate days admitted (min 1 day)
@@ -160,7 +160,7 @@ export const patientService = {
       patientId: id,
       items: [
         { desc: `Inpatient stay room charges - ${ward?.name || 'Ward'} (${days} Days)`, qty: days, cost: roomCost },
-        { desc: `Specialist physician care fee`, qty: 1, cost: 150.00 }
+        { desc: `Specialist physician rounds fee`, qty: 1, cost: 1000.00 }
       ],
       status: 'Unpaid',
       paymentMode: 'Cash'
@@ -645,7 +645,7 @@ export const labService = {
       await billingService.create({
         patientId: report.patientId,
         items: [
-          { desc: `Lab Diagnostic: ${report.testName}`, qty: 1, cost: 75.00 }
+          { desc: `Lab Diagnostic: ${report.testName}`, qty: 1, cost: 750.00 }
         ],
         status: 'Unpaid',
         paymentMode: 'Cash'

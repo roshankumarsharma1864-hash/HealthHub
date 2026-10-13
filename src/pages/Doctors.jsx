@@ -470,7 +470,7 @@ export const Doctors = () => {
             id="doc-name" 
             value={form.name} 
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Sarah Jenkins" 
+            placeholder="Dr. Rajeshwari Sengupta" 
             required 
           />
           <Select 
@@ -485,7 +485,7 @@ export const Doctors = () => {
             id="doc-exp" 
             value={form.experience} 
             onChange={(e) => setForm({ ...form, experience: e.target.value })}
-            placeholder="8 Years / MD" 
+            placeholder="12 Years / MBBS, MD (AIIMS)" 
             required 
           />
           <div className="grid grid-cols-2 gap-4">
@@ -495,7 +495,7 @@ export const Doctors = () => {
               type="email"
               value={form.email} 
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="sarah.j@healthhub.com" 
+              placeholder="rajeshwari@healthhub.in" 
               required 
             />
             <Input 
@@ -503,7 +503,7 @@ export const Doctors = () => {
               id="doc-phone" 
               value={form.phone} 
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="+1 (555) 123-4567" 
+              placeholder="+91 98450 10101" 
               required 
             />
           </div>
