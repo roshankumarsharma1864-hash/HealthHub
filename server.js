@@ -14,6 +14,7 @@ app.use(express.json());
 
 // Serve static assets from React Vite production build
 app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/dist', express.static(path.join(__dirname, 'dist')));
 
 // A simple backend API health check endpoint
 app.get('/api/health', (req, res) => {
