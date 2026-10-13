@@ -17,6 +17,8 @@ import Billing from './pages/Billing.jsx';
 import Pharmacy from './pages/Pharmacy.jsx';
 import Prescriptions from './pages/Prescriptions.jsx';
 import Laboratory from './pages/Laboratory.jsx';
+import LabReports from './pages/LabReports.jsx';
+import Wards from './pages/Wards.jsx';
 import Departments from './pages/Departments.jsx';
 import Emergency from './pages/Emergency.jsx';
 import AIAssistant from './pages/AIAssistant.jsx';
@@ -67,7 +69,7 @@ export const App = () => {
     setRouteLoading(true);
     const timer = setTimeout(() => {
       setRouteLoading(false);
-    }, 6000);
+    }, 450);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
@@ -195,7 +197,7 @@ export const App = () => {
                   path="/wards" 
                   element={
                     <RouteGuard allowedRoles={['Admin', 'Receptionist', 'Doctor']}>
-                      <BedManagement />
+                      <Wards />
                     </RouteGuard>
                   } 
                 />
@@ -247,7 +249,7 @@ export const App = () => {
                   path="/lab-reports" 
                   element={
                     <RouteGuard allowedRoles={['Admin', 'Doctor']}>
-                      <Laboratory />
+                      <LabReports />
                     </RouteGuard>
                   } 
                 />
