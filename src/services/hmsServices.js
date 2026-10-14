@@ -742,10 +742,46 @@ export const messageService = {
       receiver: users.find(u => u.id === m.receiverId) || null
     }));
   },
+  async getByChannel(channelId = 'general') {
+    const msgs = await db.getAll(KEYS.MESSAGES);
+    const users = await db.getAll(KEYS.USERS);
+
+    // Filter by channel: match explicit channelId, or fall back to general channel for legacy messages
+    const channelMsgs = msgs.filter(m => {
+      if (m.channelId) {
+        return m.channelId === channelId;
+      }
+      return channelId === 'general';
+    });
+
+    return channelMsgs.map(m => {
+      const sender = users.find(u => u.id === m.senderId);
+      return {
+        ...m,
+        senderName: m.senderName || sender?.name || 'Staff Member',
+        senderRole: m.senderRole || sender?.role || 'Clinician',
+        timestamp: m.timestamp || m.createdAt || new Date().toISOString()
+      };
+    });
+  },
+  async create(messageData, userId = 'system') {
+    const newMsg = {
+      channelId: messageData.channelId || 'general',
+      text: messageData.text,
+      senderId: userId !== 'system' ? userId : (messageData.senderId || 'usr-admin-1'),
+      senderName: messageData.senderName || 'Staff Member',
+      senderRole: messageData.senderRole || 'Admin',
+      timestamp: new Date().toISOString(),
+      isUnread: false,
+      userId
+    };
+    return await db.create(KEYS.MESSAGES, newMsg);
+  },
   async send(senderId, receiverId, text, userId = 'system') {
     return await db.create(KEYS.MESSAGES, {
       senderId,
       receiverId,
+      channelId: 'general',
       text,
       timestamp: new Date().toISOString(),
       isUnread: true,

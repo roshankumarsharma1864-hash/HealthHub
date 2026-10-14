@@ -146,22 +146,22 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isDarkMode, toggleDarkMod
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 text-slate-350 border-r border-slate-800 transition-all duration-300 ${
+      className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
       {/* Brand header */}
-      <div className="flex flex-col justify-center px-6 h-20 border-b border-slate-800 text-white font-bold overflow-hidden select-none">
+      <div className="flex flex-col justify-center px-6 h-20 border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold overflow-hidden select-none">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
             <HeartPulse className="w-5.5 h-5.5 text-white" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-extrabold tracking-tight text-white leading-tight">
+              <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
                 HEALTH HUB
               </span>
-              <span className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase leading-none mt-0.5">
+              <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase leading-none mt-0.5">
                 Hospital Management System
               </span>
             </div>
@@ -180,12 +180,12 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isDarkMode, toggleDarkMod
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 group text-sm select-none ${
                   isActive
-                    ? 'bg-blue-600 text-white font-medium shadow-lg shadow-blue-900/20'
-                    : 'hover:bg-slate-800 hover:text-slate-150'
+                    ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-500/20'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80'
                 }`
               }
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
+              <Icon className="w-5 h-5 flex-shrink-0 transition-colors" />
               {!isCollapsed && <span>{item.name}</span>}
             </NavLink>
           );
@@ -193,34 +193,34 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isDarkMode, toggleDarkMod
       </nav>
 
       {/* Bottom Profile & Mode Toggles */}
-      <div className="p-4 border-t border-slate-800 flex flex-col gap-3">
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-3">
         {/* Dark/Light mode toggle */}
         <button
           onClick={toggleDarkMode}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-slate-205 hover:bg-slate-800 transition-colors w-full text-left text-sm cursor-pointer select-none"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full text-left text-sm cursor-pointer select-none"
         >
-          {isDarkMode ? <Sun className="w-5 h-5 flex-shrink-0 text-amber-400" /> : <Moon className="w-5 h-5 flex-shrink-0 text-slate-400" />}
-          {!isCollapsed && <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+          {isDarkMode ? <Sun className="w-5 h-5 flex-shrink-0 text-amber-500" /> : <Moon className="w-5 h-5 flex-shrink-0 text-slate-500" />}
+          {!isCollapsed && <span className="font-medium">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
         </button>
 
         {/* User Card */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/40 overflow-hidden border border-slate-800/40 select-none">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/40 overflow-hidden border border-slate-200 dark:border-slate-800/40 select-none">
           <div className="relative flex-shrink-0">
             <img
               src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
               alt="user avatar"
-              className="w-10 h-10 rounded-full object-cover border border-slate-700"
+              className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
             />
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
           </div>
           {!isCollapsed && (
             <div className="flex-grow min-w-0">
-              <h4 className="text-xs font-bold text-white truncate">{user?.name || 'Admin'}</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">{user?.name || 'Admin'}</h4>
+              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mt-0.5">
                 {user?.role === 'Admin' ? 'Super Administrator' : user?.role || 'Staff Member'}
               </p>
-              <div className="flex items-center gap-1 mt-1 text-[9px] text-emerald-400 font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="flex items-center gap-1 mt-1 text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Online</span>
               </div>
             </div>
@@ -228,7 +228,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isDarkMode, toggleDarkMod
           {!isCollapsed && (
             <button
               onClick={handleLogout}
-              className="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors flex-shrink-0 cursor-pointer"
+              className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex-shrink-0 cursor-pointer"
               title="Logout"
             >
               <LogOut className="w-4.5 h-4.5" />

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { User, Mail, Phone, Lock, Image, Eye, EyeOff } from 'lucide-react';
-import { Button, Input, Card } from '../components/UI.jsx';
+import { User, Mail, Phone, Lock, Image, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Button, Input, Card, Badge } from '../components/UI.jsx';
+import { KEYS, db } from '../services/db.js';
 
 export const Profile = () => {
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const toast = useToast();
 
   const [name, setName] = useState(user?.name || '');
@@ -13,17 +14,26 @@ export const Profile = () => {
   const [phone, setPhone] = useState(user?.phone || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
 
+  // Synchronize when auth user loads
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+      setAvatar(user.avatar || '');
+    }
+  }, [user]);
+
   // Password fields
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const handleUpdateProfile = (e) => {
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
-      // Simulate profile details save
+    try {
       const updatedUser = {
         ...user,
         name,
@@ -31,22 +41,48 @@ export const Profile = () => {
         phone,
         avatar
       };
-      // Write back to mock auth session state
-      localStorage.setItem('hms_auth_user', JSON.stringify(updatedUser));
+
+      // Persist to user record in local database
+      if (user?.id) {
+        await db.update(KEYS.USERS, user.id, { name, email, phone, avatar });
+      }
+
+      // Update active session in localStorage
+      localStorage.setItem('hms_session', JSON.stringify({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        name: updatedUser.name
+      }));
+
       setSaving(false);
       toast.success('Your profile settings updated successfully!');
-    }, 1000);
+    } catch (err) {
+      setSaving(false);
+      toast.error('Failed to update profile: ' + (err.message || 'Error occurred'));
+    }
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (!currentPassword || !newPassword) {
       toast.warning('Please enter current and new passwords.');
       return;
     }
-    toast.success('Password changed successfully!');
-    setCurrentPassword('');
-    setNewPassword('');
+    if (newPassword.length < 6) {
+      toast.warning('New password must be at least 6 characters.');
+      return;
+    }
+    try {
+      if (user?.id) {
+        await db.update(KEYS.USERS, user.id, { password: newPassword });
+      }
+      toast.success('Password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err) {
+      toast.error('Failed to update password: ' + err.message);
+    }
   };
 
   return (
@@ -67,11 +103,11 @@ export const Profile = () => {
             <img
               src={avatar || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150'}
               alt={name}
-              className="w-24 h-24 rounded-2xl object-cover border border-slate-205 dark:border-slate-700 shadow-sm mb-4"
+              className="w-24 h-24 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm mb-4"
             />
-            <h3 className="font-extrabold text-slate-850 dark:text-white text-base">{name || 'Clinical Staff'}</h3>
+            <h3 className="font-extrabold text-slate-800 dark:text-white text-base">{name || 'Clinical Staff'}</h3>
             <Badge variant="premium" className="mt-1.5 uppercase">{user?.role || 'Clinician'}</Badge>
-            <p className="text-[10.5px] text-slate-405 mt-2">HEALTH HUB staff account active.</p>
+            <p className="text-xs text-slate-400 mt-2">HEALTH HUB staff account active.</p>
           </Card>
         </div>
 

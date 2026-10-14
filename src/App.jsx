@@ -64,12 +64,12 @@ export const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
 
-  // Trigger brief loader on location/tab changes for smooth transition
+  // Trigger loader on location/tab changes for ~3 seconds to complete at least a full loop
   useEffect(() => {
     setRouteLoading(true);
     const timer = setTimeout(() => {
       setRouteLoading(false);
-    }, 450);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 

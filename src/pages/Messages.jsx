@@ -39,17 +39,17 @@ export const Messages = () => {
     try {
       const payload = {
         channelId: activeChannel,
-        text: inputText,
-        senderName: user?.name || 'Staff member',
-        senderRole: user?.role || 'Operator'
+        text: inputText.trim(),
+        senderName: user?.name || 'Staff Member',
+        senderRole: user?.role || 'Clinician'
       };
 
-      await messageService.create(payload, user.id);
+      await messageService.create(payload, user?.id || 'system');
       setInputText('');
       loadMessages();
       toast.success('Message posted to board.');
     } catch (err) {
-      toast.error('Failed to post message.');
+      toast.error('Failed to post message: ' + (err.message || 'Error occurred'));
     }
   };
 
@@ -108,7 +108,7 @@ export const Messages = () => {
                   className={`flex gap-3 max-w-[80%] ${isMe ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
                 >
                   <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center flex-shrink-0 font-bold text-xs select-none uppercase">
-                    {msg.senderName.charAt(0)}
+                    {(msg.senderName || 'S').charAt(0)}
                   </div>
                   <div className={`p-3.5 rounded-2xl text-xs ${
                     isMe

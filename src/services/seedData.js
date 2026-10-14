@@ -845,10 +845,10 @@ export const seedAll = async (force = false) => {
 
   // 14. SEED STAFF MESSAGES
   const messages = [
-    { id: 'msg-1', senderId: 'usr-admin-1', receiverId: 'usr-doctor-1', text: 'Namaste Dr. Rajeshwari, please review the latest cardiology schedule for next week.', timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(), isUnread: false },
-    { id: 'msg-2', senderId: 'usr-doctor-1', receiverId: 'usr-admin-1', text: 'Sure Dr. Rohan, I will look at it and optimize using the schedule assistant.', timestamp: new Date(Date.now() - 35 * 60 * 60 * 1000).toISOString(), isUnread: false },
-    { id: 'msg-3', senderId: 'usr-reception-1', receiverId: 'usr-doctor-1', text: 'Dr. Rajeshwari, patient Rajesh Kumar has arrived for his 10:00 AM checkup.', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), isUnread: true },
-    { id: 'msg-4', senderId: 'usr-pharmacist-1', receiverId: 'usr-admin-1', text: 'We are running low on Paracetamol and Insulin. Please approve the reorder.', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isUnread: true }
+    { id: 'msg-1', channelId: 'general', senderId: 'usr-admin-1', senderName: 'Dr. Rohan Kumar Sharma', senderRole: 'Admin', text: 'Namaste Dr. Rajeshwari, please review the latest cardiology schedule for next week.', timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(), isUnread: false },
+    { id: 'msg-2', channelId: 'general', senderId: 'usr-doctor-1', senderName: 'Dr. Rajeshwari Sengupta', senderRole: 'Doctor', text: 'Sure Dr. Rohan, I will look at it and optimize using the schedule assistant.', timestamp: new Date(Date.now() - 35 * 60 * 60 * 1000).toISOString(), isUnread: false },
+    { id: 'msg-3', channelId: 'doctors', senderId: 'usr-reception-1', senderName: 'Priya Sundaram', senderRole: 'Receptionist', text: 'Dr. Rajeshwari, patient Rajesh Kumar has arrived for his 10:00 AM checkup.', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), isUnread: true },
+    { id: 'msg-4', channelId: 'pharmacy', senderId: 'usr-pharmacist-1', senderName: 'Vikram Joshi', senderRole: 'Pharmacist', text: 'We are running low on Paracetamol and Insulin. Please approve the reorder.', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isUnread: true }
   ];
 
   // 15. SEED SYSTEM NOTIFICATIONS

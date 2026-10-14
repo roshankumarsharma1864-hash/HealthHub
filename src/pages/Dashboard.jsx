@@ -35,7 +35,12 @@ import {
   MapPin,
   Bot,
   Pill,
-  Bed
+  Bed,
+  Building2,
+  Phone,
+  Globe,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { Card, Badge, Button, Modal, Input, Select, Textarea } from '../components/UI.jsx';
 import { 
@@ -51,6 +56,8 @@ import {
   Cell 
 } from 'recharts';
 import hospitalBanner from '../assets/health_hub_hospital.jpg';
+import { KEYS, db } from '../services/db.js';
+import { INDIAN_HOSPITAL_DEFAULTS } from '../utils/currency.js';
 
 export const Dashboard = () => {
   const { user, isAdmin, isDoctor, isReceptionist } = useAuth();
@@ -66,6 +73,7 @@ export const Dashboard = () => {
   const [appointmentForm, setAppointmentForm] = useState({ patientId: '', doctorId: '', date: '', time: '09:00 AM', reason: '' });
   const [patientsList, setPatientsList] = useState([]);
   const [doctorsList, setDoctorsList] = useState([]);
+  const [hospitalInfo, setHospitalInfo] = useState(INDIAN_HOSPITAL_DEFAULTS);
 
   // Timeframe selector for analytics
   const [timeframe, setTimeframe] = useState('This Week');
@@ -76,6 +84,14 @@ export const Dashboard = () => {
       const doctors = await doctorService.getAll();
       setPatientsList(patients);
       setDoctorsList(doctors);
+
+      // Fetch dynamic hospital branding & profile settings
+      const savedSettings = await db.getAll(KEYS.SETTINGS);
+      if (savedSettings && !Array.isArray(savedSettings) && savedSettings.hospitalName) {
+        setHospitalInfo({ ...INDIAN_HOSPITAL_DEFAULTS, ...savedSettings });
+      } else {
+        setHospitalInfo({ ...INDIAN_HOSPITAL_DEFAULTS });
+      }
     } catch (err) {
       console.error('Error fetching dashboard states:', err);
     }
@@ -222,24 +238,57 @@ export const Dashboard = () => {
   return (
     <div className="flex flex-col gap-6 animate-fade-in select-none">
       
-      {/* 1. Hospital Hero Banner */}
+      {/* 1. Hospital Hero Banner with Branding & Accreditations */}
       <div 
-        className="w-full h-64 md:h-72 rounded-2xl overflow-hidden bg-cover bg-center relative shadow-premium flex flex-col justify-end p-6 md:p-8"
+        className="w-full rounded-2xl overflow-hidden bg-cover bg-center relative shadow-premium flex flex-col justify-between p-6 md:p-8 min-h-[280px]"
         style={{ backgroundImage: `url(${hospitalBanner})` }}
       >
-        <div className="absolute inset-0 bg-slate-950/45 z-0" />
-        <div className="relative z-10 text-white flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[0.5px] z-0" />
+        
+        {/* Top Header Row: Hospital Official Title & Badges */}
+        <div className="relative z-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/15 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-blue-600/90 border border-blue-400/30 flex items-center justify-center shadow-lg flex-shrink-0">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg md:text-xl font-black tracking-tight text-white uppercase drop-shadow">
+                  {hospitalInfo.hospitalName}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/25 border border-emerald-400/50 text-emerald-300">
+                  NABH ACCREDITED
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/25 border border-blue-400/50 text-blue-200">
+                  NABL CERTIFIED
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
+                {hospitalInfo.hospitalSubTitle}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs flex-shrink-0">
+            <span className="bg-red-500/20 border border-red-400/40 text-red-300 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 animate-pulse">
+              <ShieldAlert className="w-4 h-4 text-red-400" /> 24x7 Emergency: 108
+            </span>
+          </div>
+        </div>
+
+        {/* Middle/Bottom Row: Greeting and statistics */}
+        <div className="relative z-10 text-white flex flex-col md:flex-row md:items-end justify-between gap-4 mt-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-              Good Morning, Admin! 👋
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white drop-shadow">
+              Good Morning, {user?.name || 'Admin'}!
             </h1>
-            <p className="text-slate-100 text-sm mt-1.5 font-medium max-w-xl">
-              Welcome back to HEALTH HUB Hospital Dashboard
+            <p className="text-slate-200 text-sm mt-1 font-medium max-w-xl">
+              Welcome back to the clinical operations and management console.
             </p>
           </div>
 
           {/* Banner Statistics */}
-          <div className="flex flex-wrap gap-3 mt-2 md:mt-0 select-none">
+          <div className="flex flex-wrap gap-2.5 mt-2 md:mt-0 select-none">
             <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs">
               <span className="font-extrabold text-blue-300">10K+</span>
               <span className="text-slate-200">Happy Patients</span>
@@ -260,6 +309,95 @@ export const Dashboard = () => {
         </div>
       </div>
 
+      {/* Hospital Campus Directory & Operational Information Card */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 shadow-sm select-none">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/60 mb-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+              Hospital Details & Campus Directory
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+              OPD & Trauma Centers Active
+            </span>
+            {isAdmin && (
+              <button 
+                onClick={() => navigate('/settings')}
+                className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                Edit in Settings <ExternalLink className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          {/* 1. Address */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 hover:border-blue-200 dark:hover:border-blue-900 transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Campus Location</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed mt-0.5">
+                {hospitalInfo.hospitalAddress}
+              </span>
+            </div>
+          </div>
+
+          {/* 2. Contact / 24x7 Helpline */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 hover:border-emerald-200 dark:hover:border-emerald-900 transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Phone className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Helpline & Reception</span>
+              <span className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed mt-0.5 font-medium">
+                {hospitalInfo.hospitalPhone}
+              </span>
+              <span className="text-red-600 dark:text-red-400 font-extrabold text-[10px] mt-0.5 flex items-center gap-1">
+                Ambulance / Emergency: 108
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Official Email & Web Portal */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 hover:border-purple-200 dark:hover:border-purple-900 transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Digital Inquiries & Portal</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed mt-0.5 truncate">
+                {hospitalInfo.hospitalEmail}
+              </span>
+              <span className="text-primary-600 dark:text-primary-400 font-semibold text-[11px] truncate">
+                {hospitalInfo.hospitalWebsite}
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Accreditation & Legal Registrations */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 hover:border-amber-200 dark:hover:border-amber-900 transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Accreditations & Licenses</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed mt-0.5 truncate">
+                Reg: {hospitalInfo.hospRegNo}
+              </span>
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] truncate">
+                GSTIN: {hospitalInfo.gstin}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 2. KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
         <Card className="flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-premium duration-150 transition-all">
@@ -271,7 +409,7 @@ export const Dashboard = () => {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-black text-slate-800 dark:text-white">12,540</span>
-            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 8.5% from last month</p>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">+8.5% from last month</p>
           </div>
         </Card>
 
@@ -284,7 +422,7 @@ export const Dashboard = () => {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-black text-slate-800 dark:text-white">128</span>
-            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 12.3% from yesterday</p>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">+12.3% from yesterday</p>
           </div>
         </Card>
 
@@ -297,7 +435,7 @@ export const Dashboard = () => {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-black text-slate-800 dark:text-white">156</span>
-            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 3.2% from last month</p>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">+3.2% from last month</p>
           </div>
         </Card>
 
@@ -323,7 +461,7 @@ export const Dashboard = () => {
           </div>
           <div className="mt-3">
             <span className="text-xl font-black text-slate-800 dark:text-white">₹8,45,231</span>
-            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">↑ 15.8% from last month</p>
+            <p className="text-[9px] text-emerald-500 font-extrabold mt-1">+15.8% from last month</p>
           </div>
         </Card>
 
@@ -350,7 +488,7 @@ export const Dashboard = () => {
           subtitle={
             <div className="flex items-center gap-1">
               <span className="text-slate-800 dark:text-white font-black text-sm">Total Appointments: 1,246</span>
-              <span className="text-[10px] text-emerald-500 font-bold ml-1">↑ 18.6%</span>
+              <span className="text-[10px] text-emerald-500 font-bold ml-1">+18.6%</span>
             </div>
           }
           className="lg:col-span-1"

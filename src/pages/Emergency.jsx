@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { emergencyService, doctorService } from '../services/hmsServices.js';
-import { Plus, Flame, ShieldAlert, Heart, Siren, Truck, Clock, Trash2 } from 'lucide-react';
-import { Button, Input, Select, Card, Badge, Modal } from '../components/UI.jsx';
+import { Plus, Flame, ShieldAlert, Heart, Siren, Truck, Clock, Trash2, Edit } from 'lucide-react';
+import { Button, Input, Select, Card, Badge, Modal, Textarea } from '../components/UI.jsx';
 
 export const Emergency = () => {
   const { user, isAdmin, isDoctor, isReceptionist } = useAuth();
@@ -16,7 +16,7 @@ export const Emergency = () => {
   const [editingCaseId, setEditingCaseId] = useState(null);
 
   const [form, setForm] = useState({
-    patientName: '', age: '', gender: 'Male', priority: 'Critical', condition: '', assignedDoctorId: '', roomNumber: ''
+    patientName: '', age: '', gender: 'Male', priority: 'Critical', condition: '', assignedDoctorId: '', roomNumber: '', status: 'Under Evaluation'
   });
 
   const loadData = async () => {
@@ -38,10 +38,10 @@ export const Emergency = () => {
     e.preventDefault();
     try {
       if (modalMode === 'CREATE') {
-        await emergencyService.create(form, user.id);
+        await emergencyService.create(form, user?.id || 'system');
         toast.success(`Emergency case registered: ${form.patientName}`);
       } else {
-        await emergencyService.update(editingCaseId, form, user.id);
+        await emergencyService.update(editingCaseId, form, user?.id || 'system');
         toast.success('Emergency case updated.');
       }
       setIsModalOpen(false);
@@ -54,7 +54,7 @@ export const Emergency = () => {
   const openCreateModal = () => {
     setModalMode('CREATE');
     setForm({
-      patientName: '', age: '', gender: 'Male', priority: 'Critical', condition: '', assignedDoctorId: doctors[0]?.id || '', roomNumber: 'ER-101'
+      patientName: '', age: '', gender: 'Male', priority: 'Critical', condition: '', assignedDoctorId: doctors[0]?.id || '', roomNumber: 'ER-101', status: 'Under Evaluation'
     });
     setIsModalOpen(true);
   };
@@ -69,7 +69,8 @@ export const Emergency = () => {
       priority: c.priority,
       condition: c.condition,
       assignedDoctorId: c.assignedDoctorId || '',
-      roomNumber: c.roomNumber || ''
+      roomNumber: c.roomNumber || '',
+      status: c.status || 'Under Evaluation'
     });
     setIsModalOpen(true);
   };
@@ -77,7 +78,7 @@ export const Emergency = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Remove this emergency log?')) return;
     try {
-      await emergencyService.delete(id, user.id);
+      await emergencyService.delete(id, user?.id || 'system');
       toast.success('Emergency log cleared.');
       loadData();
     } catch (err) {
@@ -179,10 +180,14 @@ export const Emergency = () => {
                     <Badge variant={getPriorityBadge(c.priority)}>{c.priority}</Badge>
                   </td>
                   <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-350">{c.condition}</td>
-                  <td className="px-6 py-4 text-primary-600 font-semibold">Dr. {c.assignedDoctor?.name || 'Assessing...'}</td>
+                  <td className="px-6 py-4 text-primary-600 font-semibold">
+                    {c.assignedDoctor?.name 
+                      ? (c.assignedDoctor.name.startsWith('Dr.') ? c.assignedDoctor.name : `Dr. ${c.assignedDoctor.name}`) 
+                      : 'Assessing...'}
+                  </td>
                   <td className="px-6 py-4 font-mono text-slate-500">{c.roomNumber || 'Triage Area'}</td>
                   <td className="px-6 py-4">
-                    <Badge variant="neutral">{c.status}</Badge>
+                    <Badge variant="neutral">{c.status || 'Under Evaluation'}</Badge>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-1.5 select-none">
@@ -190,7 +195,7 @@ export const Emergency = () => {
                         <>
                           <button
                             onClick={() => openEditModal(c)}
-                            className="text-slate-400 hover:text-primary-605 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                            className="text-slate-400 hover:text-primary-600 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                             title="Update Status"
                           >
                             <Clock className="w-4 h-4" />
@@ -271,17 +276,36 @@ export const Emergency = () => {
               required 
             />
           </div>
-          <Select 
-            label="Assigned Doctor" 
-            id="er-doc" 
-            value={form.assignedDoctorId} 
-            onChange={(e) => setForm({ ...form, assignedDoctorId: e.target.value })}
-            options={[
-              { value: '', label: '-- Assign ER Clinician --' },
-              ...doctors.map(d => ({ value: d.id, label: `Dr. ${d.name} (${d.specialization})` }))
-            ]}
-            required
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Select 
+              label="Assigned Doctor" 
+              id="er-doc" 
+              value={form.assignedDoctorId} 
+              onChange={(e) => setForm({ ...form, assignedDoctorId: e.target.value })}
+              options={[
+                { value: '', label: '-- Assign ER Clinician --' },
+                ...doctors.map(d => ({ 
+                  value: d.id, 
+                  label: d.name.startsWith('Dr.') ? `${d.name} (${d.specialization})` : `Dr. ${d.name} (${d.specialization})` 
+                }))
+              ]}
+              required
+            />
+            <Select 
+              label="Triage Status" 
+              id="er-status" 
+              value={form.status || 'Under Evaluation'} 
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              options={[
+                { value: 'Under Evaluation', label: 'Under Evaluation' },
+                { value: 'In Surgery', label: 'In Surgery' },
+                { value: 'Admitted to ICU', label: 'Admitted to ICU' },
+                { value: 'Stable', label: 'Stable' },
+                { value: 'Treated & Released', label: 'Treated & Released' },
+                { value: 'Discharged', label: 'Discharged' }
+              ]}
+            />
+          </div>
           <Textarea 
             label="Medical Condition Detail" 
             id="er-cond" 
